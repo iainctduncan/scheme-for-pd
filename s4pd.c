@@ -2,12 +2,18 @@
 #include "string.h"
 #include "s7.h"
  
+#define MAX_OUTLETS 32
+
 static t_class *s4pd_class;  
  
 typedef struct _s4pd {  
     t_object x_obj;
-    s7_scheme *s7;              // pointer to the s7 instance
-    bool log_return_values;     // whether to automatically post return values from S7 interpreter to console
+    s7_scheme *s7;                  // pointer to the s7 instance
+    bool  log_return_values;        // whether to automatically post return values from S7 interpreter to console
+    bool  log_null;                 // whether to log return values that are null, unspecified, or gensyms
+    int   num_outs;
+    t_outlet *outs[MAX_OUTLETS];
+    t_symbol *filename;
 } t_s4pd;  
    
 void s4pd_s7_load(t_s4pd *x, char *full_path);
@@ -16,18 +22,130 @@ void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 
+void s4pd_reset(t_s4pd *x);
+void s4pd_log_null(t_s4pd *x, t_floatarg f);
+
+void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
+
+
+/********************************************************************************/
+// some helpers for string/symbol handling 
+// return true if a string begins and ends with quotes
+int in_quotes(char *string){
+    //post("in_quotes, input: %s", string);
+    if(string[0] == '"' && string[ strlen(string)-1 ] == '"'){
+        return 1;
+    }else{
+        return 0;
+    }
+} 
+char *trim_quotes(char *input){
+    int length = strlen(input);
+    char *trimmed = malloc( sizeof(char*) * length );
+    for(int i=0, j=0; i<length; i++){
+        if( input[i] != '"'){ trimmed[j] = input[i]; j++; }    
+    }
+    return trimmed;
+}   
+// return true if a string starts with a single quote
+int is_quoted_symbol(char *string){
+    if(string[0] == '\'' && string[ strlen(string)-1 ] != '\''){
+        return 1;
+    }else{
+        return 0;
+    }
+}
+char *trim_symbol_quote(char *input){
+    // drop the first character (the quote)
+    char *trimmed = malloc( sizeof(char*) * (strlen(input) - 1) );
+    int i;
+    for(i=1; input[i] != '\0'; i++){
+        trimmed[i-1] = input[i]; 
+    }
+    trimmed[i-1] = '\0';
+    return trimmed;
+}
+
+// convert a Pd atom to the appropriate type of s7 pointer
+// only handles basic types for now
+s7_pointer atom_to_s7_obj(s7_scheme *s7, t_atom *ap){
+    // post("atom_to_s7_obj()");
+    s7_pointer s7_obj;
+
+    switch(ap->a_type){
+        // Pd floats get turned into s7 reals. not sure how to deal with lack of ints in Pd!
+        case A_FLOAT: 
+            // post(" ... creating s7 real");
+            s7_obj = s7_make_real(s7, atom_getfloat(ap));
+            break;
+        // Pd symbols could be any of: strings, symbols, quoted symbols, symbols for #t or #f
+        case A_SYMBOL: 
+            //post("A_SYMBOL %ld: %s", atom_getsymbol(ap)->s_name);
+            // if sent \"foobar\" from max, we want an S7 string "foobar"
+            if( in_quotes(atom_getsymbol(ap)->s_name) ){
+                char *trimmed_sym = trim_quotes(atom_getsymbol(ap)->s_name);
+                // post(" ... creating s7 string");
+                s7_obj = s7_make_string(s7, trimmed_sym);
+            }else if( is_quoted_symbol(atom_getsymbol(ap)->s_name) ){
+            // if sent 'foobar, we actually want in s7 the list: ('quote 'foobar)
+                // post(" ... creating s7 quoted symbol");
+                s7_obj = s7_nil(s7); 
+                s7_obj = s7_cons(s7, s7_make_symbol(s7, trim_symbol_quote(atom_getsymbol(ap)->s_name)), s7_obj);
+                s7_obj = s7_cons(s7, s7_make_symbol(s7, "quote"), s7_obj); 
+            }else{
+                // otherwise, make it an s7 symbol
+                // NB: foo -> foo, 'foo -> (symbol "foo")
+                t_symbol *sym = atom_getsymbol(ap); 
+                // post(" ... creating s7 symbol from %s ", sym->s_name);
+                if( sym == gensym("#t") || sym == gensym("#true") ){
+                    s7_obj = s7_t(s7);
+                }else if( sym == gensym("#f") || sym == gensym("#false") ){
+                    s7_obj = s7_f(s7);
+                }else{
+                    s7_obj = s7_make_symbol(s7, sym->s_name);
+                }
+            }
+            break;
+         default:
+            // unhandled types return an s7 nil
+            post("ERROR: unknown atom type (%ld)", ap->a_type);
+            s7_obj = s7_nil(s7);
+    }
+    // post("returning s7 obj: %s", s7_object_to_c_string(s7, s7_obj));
+    return s7_obj;
+}
 
 void s4pd_bang(t_s4pd *x){
     (void)x; // silence unused variable warning
     post("s4pd received bang...");
     
     // lets run us some scheme...
-    char * code_1 = "(define (hello-world) :hello-the-world)";
-    s4pd_s7_eval_string(x, code_1);
+    //char * code_1 = "(define (hello-world) :hello-the-world)";
+    //s4pd_s7_eval_string(x, code_1);
 
-    char * code_2 = "(hello-world)";
-    s4pd_s7_eval_string(x, code_2);
+    //char * code_2 = "(hello-world)";
+    //s4pd_s7_eval_string(x, code_2);
+
+    // send a float out the outlet
+    //outlet_float(x->x_obj.ob_outlet, 123.123);
+    outlet_float(x->outs[0], 0.0);
+    outlet_float(x->outs[1], 1.0);
 }  
+
+void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
+    post("s4pd_message() argc: %i", argc);
+    t_atom *ap;
+    s7_pointer s7_args = s7_nil(x->s7); 
+    // loop through the args backwards to build the cons list 
+    for(int i = argc-1; i >= 0; i--) {
+        ap = argv + i;
+        s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
+    }
+    // add the first message to the arg list (it's always a symbol)
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
+    // call the s7 eval function, sending in all args as an s7 list
+    //s4m_s7_call(x, s7_name_to_value(x->s7, "s4m-eval"), s7_args);
+}
 
 void s4pd_init_s7(t_s4pd *x){
     post("s4pd_init_s7");
@@ -37,18 +155,58 @@ void s4pd_init_s7(t_s4pd *x){
 }
 
 
-void *s4pd_new(void){  
+void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
     post("s4pd_new()");
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
-    // set up private vars
+
+    // set up default vars
     x->log_return_values = true;
+    x->log_null = false;
+    x->num_outs = 1;
+    x->filename = gensym("");
+
+    // if args are given, they are: outs, filename
+    switch(argc){
+      default:
+      case 2:
+        x->filename = atom_getsymbol(argv+2);
+      case 1:
+        x->num_outs = atom_getint(argv);
+    }
+    post(" - outs: %i filename: %s", x->num_outs, x->filename->s_name);
+    // make the outlets
+    for(int i = 0; i < x->num_outs; i++){
+      x->outs[i] = outlet_new(&x->x_obj, 0);
+    }
+
     s4pd_init_s7(x); 
     return (void *)x;  
 }  
  
 void s4pd_setup(void) {  
-    s4pd_class = class_new(gensym("s4pd"),  (t_newmethod)s4pd_new, NULL, sizeof(t_s4pd), CLASS_DEFAULT, 0);  
+    s4pd_class = class_new(gensym("s4pd"),  
+        (t_newmethod)s4pd_new, 
+        NULL, 
+        sizeof(t_s4pd), 
+        CLASS_DEFAULT, 
+        A_GIMME,        // allow dynamic number of arguments
+        0);  
+
     class_addbang(s4pd_class, s4pd_bang);  
+    class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
+    class_addanything(s4pd_class, (t_method)s4pd_message);
+}
+
+void s4pd_reset(){
+    post("reset message received!");
+}
+
+// a method that takes a float and does something
+void s4pd_log_null(t_s4pd *x, t_floatarg arg){
+    post("log_null()");
+    x->log_null = (int) arg == 0 ? false : true;
+    post("x.log_null now: %i", x->log_null);
 }
 
 // hook to allow user to alter how results get logged to the console
