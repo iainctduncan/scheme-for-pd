@@ -1,0 +1,21 @@
+S4PD todo
+
+DONE
+- basic atom_to_s7
+- basic s7_to_atom
+- input of messages to s7 list
+
+
+BETA 1
+- do input and output
+- be able to read files, including nested loads
+- run scheme messages from pd messages
+- reset interpreter
+- log to console properly
+
+LEFT
+- output of numbers working, but not for quoted symbols, WTF
+  - there is something different about this for pd, don't seem to be able to 
+    do same thing as max
+  - 
+
