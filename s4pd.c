@@ -86,7 +86,7 @@ s7_pointer atom_to_s7_obj(s7_scheme *s7, t_atom *ap){
             break;
         // Pd symbols could be any of: strings, symbols, quoted symbols, symbols for #t or #f
         case A_SYMBOL: 
-            //post("A_SYMBOL %ld: %s", atom_getsymbol(ap)->s_name);
+            // post("A_SYMBOL %ld: %s", atom_getsymbol(ap)->s_name);
             // if sent \"foobar\" from max, we want an S7 string "foobar"
             if( in_quotes(atom_getsymbol(ap)->s_name) ){
                 char *trimmed_sym = trim_quotes(atom_getsymbol(ap)->s_name);
@@ -122,35 +122,35 @@ s7_pointer atom_to_s7_obj(s7_scheme *s7, t_atom *ap){
 }
 
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom){
-    post("s7_obj_to_atom");
+    //post("s7_obj_to_atom");
 
     // TODO: not yet handling lists or vectors (in Max, these become atom arrays)
     // TODO: not yet handling hashtables (in Max, these become dicts)
     
     // booleans are cast to floats 
     if( s7_is_boolean(s7_obj) ){
-        post("creating Pd 1 or 0 float from s7 boolean");
+        //post("creating Pd 1 or 0 float from s7 boolean");
         SETFLOAT(atom, (float)s7_boolean(s7, s7_obj));  
     }
     else if( s7_is_integer(s7_obj)){
-        post("creating int atom, %i", s7_integer(s7_obj));
+        //post("creating int atom, %i", s7_integer(s7_obj));
         SETFLOAT(atom, s7_integer(s7_obj));
     }
     else if( s7_is_real(s7_obj)){
-        post("creating float atom, %.2f", s7_real(s7_obj));
+        //post("creating float atom, %.2f", s7_real(s7_obj));
         SETFLOAT(atom, s7_real(s7_obj));
     }
     else if( s7_is_symbol(s7_obj) ){
         // both s7 symbols and strings are converted to symbols
-        post("creating symbol atom, %s", s7_symbol_name(s7_obj));
+        //post("creating symbol atom, %s", s7_symbol_name(s7_obj));
         SETSYMBOL(atom, gensym( s7_symbol_name(s7_obj)));
     }
     else if( s7_is_string(s7_obj) ){
-        post("creating symbol atom from string, %s", s7_string(s7_obj));
+        //post("creating symbol atom from string, %s", s7_string(s7_obj));
         SETSYMBOL(atom, gensym( s7_string(s7_obj)));
     }
     else if( s7_is_character(s7_obj) ){
-        post("creating symbol atom from character");
+        //post("creating symbol atom from character");
         char out[2] = " \0";
         out[0] = s7_character(s7_obj);
         SETSYMBOL(atom, gensym(out));
@@ -172,7 +172,7 @@ t_s4pd *get_pd_obj(s7_scheme *s7){
 
 // function to send generic output out an outlet
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
-    post("s7_pd_output, args: %s", s7_object_to_c_string(s7, args));
+    //post("s7_pd_output, args: %s", s7_object_to_c_string(s7, args));
     
     // all added functions have this form, args is a list, s7_car(args) is the first arg, etc 
     int outlet_num = (int) s7_real( s7_car(args) );
@@ -188,7 +188,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     t_atom output_atom; 
     int err;
 
-    post("  s7_out_val: %s", s7_object_to_c_string(s7, s7_out_val));
+    //post("  - s7_out_val: %s", s7_object_to_c_string(s7, s7_out_val));
 
     // bools and all numbers become pd floats 
     if( s7_is_real(s7_out_val) || s7_is_boolean(s7_out_val) ){
@@ -200,19 +200,19 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
         }
     }
     // symbols, keywords, chars, and strings all become pd symbols
-    // to the message type IS the symbol
-    // XXX: not working for quoted symbols for some reason
+    // in PD, symbol messages always start with 'symbol', unlike Max, where the message type IS the symbol
     else if( s7_is_string(s7_out_val) || s7_is_symbol(s7_out_val) || s7_is_character(s7_out_val) ){
-        post(" - symbol output");
+        //post(" - output is a symbol");
         // note that symbol catches keywords as well
         err = s7_obj_to_atom(s7, s7_out_val, &output_atom);
         if( err ){
-            post("error outputing %s", s7_object_to_c_string(s7, s7_out_val));
+            post("  - error in s7_obj_to_atom, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
         }else{
-            outlet_symbol(x->outlets[outlet_num], atom_getsymbol(&output_atom)); 
+            // note that unlike Max, the output message is always "symbol {thing}"
+            outlet_anything(x->outlets[outlet_num], gensym("symbol"), 1, &output_atom); 
         }
     }else{
-        post("error outputing %s", s7_object_to_c_string(s7, s7_out_val));
+        post("uncaught s7_type, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
     }
     return s7_nil(s7);
 
@@ -270,26 +270,8 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     */
 }
 
-
-void s4pd_bang(t_s4pd *x){
-    (void)x; // silence unused variable warning
-    post("s4pd received bang...");
-    
-    // lets run us some scheme...
-    //char * code_1 = "(define (hello-world) :hello-the-world)";
-    //s4pd_s7_eval_string(x, code_1);
-
-    //char * code_2 = "(hello-world)";
-    //s4pd_s7_eval_string(x, code_2);
-
-    // send a float out the outlet
-    //outlet_float(x->x_obj.ob_outlet, 123.123);
-    outlet_float(x->outlets[0], 0.0);
-    outlet_float(x->outlets[1], 1.0);
-}  
-
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
-    post("s4pd_message() argc: %i", argc);
+    // post("s4pd_message() argc: %i", argc);
     t_atom *ap;
     s7_pointer s7_args = s7_nil(x->s7); 
     // loop through the args backwards to build the cons list 
@@ -297,33 +279,33 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
         ap = argv + i;
         s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
     }
-    //post("  - s7 args: %s", s7_object_to_c_string(x->s7, s7_args) );
-    // use first symbol as function and call 
-    s4pd_s7_call(x, s7_name_to_value(x->s7, s->s_name), s7_args);
-
-    // how we do it in s4m in case we want to adopt this later:
     // add the first message to the arg list (it's always a symbol)
     // call the s7 eval function, sending in all args as an s7 list
-    //s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
-    //s4pd_s7_call(x, s7_name_to_value(x->s7, "s4m-eval"), s7_args);
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
+    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
 }
 
 void s4pd_init_s7(t_s4pd *x){
     post("s4pd_init_s7");
     // start the S7 interpreter 
     x->s7 = s7_init();
-    s7_define_function(x->s7, "pd-output", s7_pd_output, 2, 0, false, "(pd-output 1 99) sends value 99 out outlet 1");
+
+    s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
+
+    // define our s4m-eval function for compatability with s4m
+    s4pd_s7_eval_string(x, "(define s4pd-eval (lambda args (eval args (rootlet))))");
+
     post("init complete");
 }
 
 
 void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
-    post("s4pd_new()");
+    post("s4pd_new() running");
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
@@ -359,7 +341,6 @@ void s4pd_setup(void) {
         A_GIMME,        // allow dynamic number of arguments
         0);  
 
-    class_addbang(s4pd_class, s4pd_bang);  
     class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
     class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
     class_addanything(s4pd_class, (t_method)s4pd_message);
@@ -413,7 +394,8 @@ void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval){
 
 // call s7_call, with error logging
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
-    post("s4pd_s7_call()");
+    //post("s4pd_s7_call()");
+    //post(" - function: %s args: %s", s7_object_to_c_string(x->s7, funct), s7_object_to_c_string(x->s7, args));
     int gc_loc;
     s7_pointer old_port;
     const char *errmsg = NULL;
@@ -434,6 +416,7 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
         post("s4pd Error: %s", msg);
         free(msg);
     }else{
+        //post(" res from call: %s", s7_object_to_c_string(x->s7, res));
         if(x->log_return_values) s4pd_post_s7_res(x, res);
     }
 }
