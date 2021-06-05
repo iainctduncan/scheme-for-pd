@@ -19,8 +19,6 @@ typedef struct _s4pd {
 } t_s4pd;  
    
 void s4pd_s7_load(t_s4pd *x, char *full_path);
-void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
-void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
@@ -271,18 +269,30 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
 }
 
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
-    // post("s4pd_message() argc: %i", argc);
-    t_atom *ap;
-    s7_pointer s7_args = s7_nil(x->s7); 
-    // loop through the args backwards to build the cons list 
-    for(int i = argc-1; i >= 0; i--) {
-        ap = argv + i;
-        s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
+    post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
+
+    // case for code as a symbol
+    if( s == gensym("symbol")){
+        post("hanlding scheme code in a symbol message");
+        t_symbol *code_sym = atom_getsymbol(argv); 
+        post("code: %s", code_sym->s_name); 
+        s4pd_s7_eval_string(x, code_sym->s_name);
     }
-    // add the first message to the arg list (it's always a symbol)
-    // call the s7 eval function, sending in all args as an s7 list
-    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
-    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
+    // case for code as generic list of atoms
+    else{
+        t_atom *ap;
+        s7_pointer s7_args = s7_nil(x->s7); 
+        // loop through the args backwards to build the cons list 
+        for(int i = argc-1; i >= 0; i--) {
+            ap = argv + i;
+            s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
+        }
+        // add the first message to the arg list (it's always a symbol)
+        // call the s7 eval function, sending in all args as an s7 list
+        s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
+        //post("  - s7_args: %s", s7_object_to_c_string(x->s7, s7_args));
+        s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
+    }
 }
 
 void s4pd_init_s7(t_s4pd *x){
