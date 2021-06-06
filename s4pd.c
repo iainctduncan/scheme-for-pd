@@ -28,9 +28,11 @@ void s4pd_log_null(t_s4pd *x, t_floatarg f);
 
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
 
 // XXX: how are error codes handled in Pd??
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
+
 
 /********************************************************************************/
 // some helpers for string/symbol handling 
@@ -169,6 +171,16 @@ t_s4pd *get_pd_obj(s7_scheme *s7){
 }
 
 // function to send generic output out an outlet
+static s7_pointer s7_post(s7_scheme *s7, s7_pointer args){
+    //post("s7_post, args: %s", s7_object_to_c_string(s7, args));
+    char *str_repr = s7_object_to_c_string(s7, args) + 1;
+    str_repr[ strlen(str_repr) - 1] = '\0';
+    // don't print the opening and closing parens
+    post("s4pd: %s", str_repr);
+    return s7_nil(s7); 
+}
+
+// function to send generic output out an outlet
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     //post("s7_pd_output, args: %s", s7_object_to_c_string(s7, args));
     
@@ -209,12 +221,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
             // note that unlike Max, the output message is always "symbol {thing}"
             outlet_anything(x->outlets[outlet_num], gensym("symbol"), 1, &output_atom); 
         }
-    }else{
-        post("uncaught s7_type, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
     }
-    return s7_nil(s7);
-
-    /*
     // lists
     else if( s7_is_list(s7, s7_out_val) && !s7_is_null(s7, s7_out_val) ){
         // array of atoms to output, we overallocate for now rather than do dynamic allocation 
@@ -226,7 +233,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
         if( s7_is_number(first) || s7_is_boolean(first) ){
             //post("outputting list with numeric or bool first arg, becomes 'list' message");
             for(int i=0; i<length; i++){
-                s7_obj_to_max_atom(s7, s7_list_ref(s7, s7_out_val, i), &out_list[i]);
+                s7_obj_to_atom(s7, s7_list_ref(s7, s7_out_val, i), &out_list[i]);
             }
             // add the symbol "list" as the first item for the message output
             outlet_anything( x->outlets[outlet_num], gensym("list"), length, out_list);     
@@ -235,47 +242,52 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
             //post("list starting with a symbol");     
             // build the atom list, starting from the second item 
             for(int i=1; i<length; i++){
-                s7_obj_to_max_atom(s7, s7_list_ref(s7, s7_out_val, i), &out_list[i - 1]);
+                s7_obj_to_atom(s7, s7_list_ref(s7, s7_out_val, i), &out_list[i - 1]);
             }
-            // convert the first item to use as symbol for message
-            err = s7_obj_to_max_atom(s7, first, &output_atom); 
-            outlet_anything( x->outlets[outlet_num], atom_getsym(&output_atom), length - 1, out_list);     
+            // use the first item of the list as the symbolic message selector
+            // thus to output a 'list' message, user can do (out 0 '(list :a :b :c))
+            err = s7_obj_to_atom(s7, first, &output_atom); 
+            outlet_anything( x->outlets[outlet_num], atom_getsymbol(&output_atom), length - 1, out_list);     
         }
     }
-    // vectors are supported for bool, int, float only
-    else if( s7_is_vector(s7_out_val) && s7_vector_length(s7_out_val) > 0 ){
-        t_atom out_list[MAX_ATOMS_PER_OUTPUT_LIST];
-        int length = s7_vector_length(s7_out_val);
-        for(int i=0; i<length; i++){
-            // if invalid type, return with error
-            s7_pointer *item = s7_vector_ref(s7, s7_out_val, i);
-            if( s7_is_number(item) || s7_is_boolean(item)){
-                s7_obj_to_max_atom(s7, item, &out_list[i]);
-            }else{
-                error("s4m: Vector output only supported for ints, floats, & booleans");
-                return s7_nil(s7);
-            }
-        }
-        // didn't hit an invalid type, we can output the list
-        outlet_anything( x->outlets[outlet_num], gensym("list"), length, out_list);     
-    } 
-    // unhandled output type, post an error
     else{
-        error("s4m: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
+        post("uncaught s7_type, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
     }
-    // returns nil so that the console is not chatting on every output message
     return s7_nil(s7);
-    */
+
+    // vectors are supported for bool, int, float only
+    // TODO: should support output of vectors of symbols too I think... 
+    //else if( s7_is_vector(s7_out_val) && s7_vector_length(s7_out_val) > 0 ){
+    //    t_atom out_list[MAX_ATOMS_PER_OUTPUT_LIST];
+    //    int length = s7_vector_length(s7_out_val);
+    //    for(int i=0; i<length; i++){
+    //        // if invalid type, return with error
+    //        s7_pointer *item = s7_vector_ref(s7, s7_out_val, i);
+    //        if( s7_is_number(item) || s7_is_boolean(item)){
+    //            s7_obj_to_max_atom(s7, item, &out_list[i]);
+    //        }else{
+    //            error("s4m: Vector output only supported for ints, floats, & booleans");
+    //            return s7_nil(s7);
+    //        }
+    //    }
+    //    // didn't hit an invalid type, we can output the list
+    //    outlet_anything( x->outlets[outlet_num], gensym("list"), length, out_list);     
+    //} 
+    // unhandled output type, post an error
+    //else{
+    //    error("s4m: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
+    //}
+    //// returns nil so that the console is not chatting on every output message
+    //return s7_nil(s7);
 }
 
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
-    post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
+    //post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
 
     // case for code as a symbol
     if( s == gensym("symbol")){
-        post("hanlding scheme code in a symbol message");
+        //post("hanlding scheme code in a symbol message");
         t_symbol *code_sym = atom_getsymbol(argv); 
-        post("code: %s", code_sym->s_name); 
         s4pd_s7_eval_string(x, code_sym->s_name);
     }
     // case for code as generic list of atoms
@@ -296,30 +308,31 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
 }
 
 void s4pd_init_s7(t_s4pd *x){
-    post("s4pd_init_s7");
+    post("s4pd_init_s7...");
     // start the S7 interpreter 
     x->s7 = s7_init();
 
     s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
+    s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
 
-    // define our s4m-eval function for compatability with s4m
+    // define our s4pd-eval function for compatability with s4m
     s4pd_s7_eval_string(x, "(define s4pd-eval (lambda args (eval args (rootlet))))");
 
-    post("init complete");
+    post("... s4pd_init_s7() done");
 }
 
 
 void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
-    post("s4pd_new() running");
+    post("s4pd_new() ...");
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
-    x->log_return_values = true;
+    x->log_return_values = false;
     x->log_null = false;
     x->num_outlets = 1;
     x->filename = gensym("");
@@ -339,6 +352,8 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     }
 
     s4pd_init_s7(x); 
+    post("... s4pd_new() done");
+    x->log_return_values = true;
     return (void *)x;  
 }  
  
@@ -357,17 +372,15 @@ void s4pd_setup(void) {
 }
 
 void s4pd_reset(){
-    post("reset message received!");
+    post("s4pd_reset() - not yet implemented");
 }
 
-// a method that takes a float and does something
 void s4pd_log_null(t_s4pd *x, t_floatarg arg){
     post("log_null()");
     x->log_null = (int) arg == 0 ? false : true;
     post("x.log_null now: %i", x->log_null);
 }
 
-// hook to allow user to alter how results get logged to the console
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res) {
     char *log_out = s7_object_to_c_string(x->s7, res);
     post("s4pd> %s", log_out);
@@ -376,7 +389,7 @@ void s4pd_post_s7_res(t_s4pd *x, s7_pointer res) {
 
 // eval string  with error logging
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval){
-    post("s4pd_s7_eval_string() %s", string_to_eval);
+    //post("s4pd_s7_eval_string() %s", string_to_eval);
     int gc_loc;
     s7_pointer old_port;
     const char *errmsg = NULL;
@@ -430,6 +443,7 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
         if(x->log_return_values) s4pd_post_s7_res(x, res);
     }
 }
+
 /*
 // call s7_load, with error logging
 void s4pd_s7_load(t_s4pd *x, char *full_path){
