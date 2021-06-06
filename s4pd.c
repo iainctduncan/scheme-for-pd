@@ -30,6 +30,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_table_write(s7_scheme *s7, s7_pointer args);
 
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
 
@@ -248,9 +249,9 @@ static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args){
     s7_pointer *s7_return_value = s7_make_boolean(x->s7, false); 
 
     char *array_name;
-    int  arr_index = 0;
+    t_int  arr_index = 0;
     t_garray *array;
-    int num_points;
+    t_int num_points;
     t_word *values_vector;
 
     // get and check array name and index point from s7_args
@@ -284,6 +285,62 @@ static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args){
     return s7_return_value;
 }
 
+// write a float to a Pd array
+static s7_pointer s7_table_write(s7_scheme *s7, s7_pointer args){
+    //post("s7_table_write, args: %s", s7_object_to_c_string(s7, args));
+    t_s4pd *x = get_pd_obj(s7);
+    // initialize return value to false, which means error writing
+    // returns value written on success
+    s7_pointer *s7_return_value = s7_make_boolean(x->s7, false); 
+
+    char *array_name;
+    t_int index;
+    t_float value;
+
+    t_garray *array;
+    t_int num_points;
+    t_word *values_vector;
+
+    // get and check array name, index point, and value from s7_args
+    if( s7_is_symbol( s7_car(args) ) ){ 
+        array_name = s7_symbol_name( s7_car(args) );
+    }else{
+        pd_error((t_object *)x, "s4pd: (table-write): arg 1 must be a symbol of an array name");
+        return s7_return_value;
+    }
+    if( s7_is_number(s7_cadr(args))){
+        index = s7_integer(s7_cadr(args)); 
+    }else{
+        pd_error((t_object *)x, "s4pd: (table-write): arg 2 must be an index");
+        return s7_return_value;
+    }
+    if( s7_is_number(s7_caddr(args))){
+        value = s7_real(s7_caddr(args)); 
+    }else{
+        pd_error((t_object *)x, "s4pd: (table-write): arg 3 must be a number");
+        return s7_return_value;
+    }
+    //post("tabw %s %i %5.2f", array_name, index, value);
+
+    // get the array contents (altered from Pd's d_array.c)
+    if (!(array = (t_garray *)pd_findbyclass( gensym(array_name), garray_class))){
+        pd_error(x, "s4pd: (table-write) no array named %s", array_name);
+        return s7_return_value;
+    }else if (!garray_getfloatwords(array, &num_points, &values_vector)){
+        pd_error(x, "s4pd: (table-write) error reading %s", array_name);
+        return s7_return_value;
+    }
+    // check index in range
+    if( index < 0 || index >= num_points ){
+        pd_error((t_object *)x, "s4pd: (table-write): index out of range");
+        return s7_return_value;
+    }
+    // update array, call redraw, and return written value
+    values_vector[ index ].w_float = value;
+    garray_redraw(array);
+    s7_return_value = s7_make_real(x->s7, value);
+    return s7_return_value;
+}
 
 // send output out an outlet
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
@@ -415,8 +472,10 @@ void s4pd_init_s7(t_s4pd *x){
     s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
     s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
 
-    s7_define_function(x->s7, "table-read", s7_table_read, 2, 0, true, "read a point from an array");
-    s7_define_function(x->s7, "tabr", s7_table_read, 2, 0, true, "read a point from an array");
+    s7_define_function(x->s7, "table-read", s7_table_read, 2, 0, false, "read a point from an array");
+    s7_define_function(x->s7, "tabr", s7_table_read, 2, 0, false, "read a point from an array");
+    s7_define_function(x->s7, "table-write", s7_table_write, 3, 0, false, "write a point to an array");
+    s7_define_function(x->s7, "tabw", s7_table_write, 3, 0, false, "write a point to an array");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
