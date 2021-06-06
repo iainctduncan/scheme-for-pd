@@ -180,7 +180,7 @@ static s7_pointer s7_post(s7_scheme *s7, s7_pointer args){
     return s7_nil(s7); 
 }
 
-// function to send generic output out an outlet
+// send output out an outlet
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     //post("s7_pd_output, args: %s", s7_object_to_c_string(s7, args));
     
@@ -197,7 +197,6 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     t_symbol *msg_sym;  // the first symbol for the outlet_anything message 
     t_atom output_atom; 
     int err;
-
     //post("  - s7_out_val: %s", s7_object_to_c_string(s7, s7_out_val));
 
     // bools and all numbers become pd floats 
@@ -250,35 +249,30 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
             outlet_anything( x->outlets[outlet_num], atom_getsymbol(&output_atom), length - 1, out_list);     
         }
     }
-    else{
-        post("uncaught s7_type, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
-    }
-    return s7_nil(s7);
-
     // vectors are supported for bool, int, float only
     // TODO: should support output of vectors of symbols too I think... 
-    //else if( s7_is_vector(s7_out_val) && s7_vector_length(s7_out_val) > 0 ){
-    //    t_atom out_list[MAX_ATOMS_PER_OUTPUT_LIST];
-    //    int length = s7_vector_length(s7_out_val);
-    //    for(int i=0; i<length; i++){
-    //        // if invalid type, return with error
-    //        s7_pointer *item = s7_vector_ref(s7, s7_out_val, i);
-    //        if( s7_is_number(item) || s7_is_boolean(item)){
-    //            s7_obj_to_max_atom(s7, item, &out_list[i]);
-    //        }else{
-    //            error("s4m: Vector output only supported for ints, floats, & booleans");
-    //            return s7_nil(s7);
-    //        }
-    //    }
-    //    // didn't hit an invalid type, we can output the list
-    //    outlet_anything( x->outlets[outlet_num], gensym("list"), length, out_list);     
-    //} 
+    else if( s7_is_vector(s7_out_val) && s7_vector_length(s7_out_val) > 0 ){
+        t_atom out_list[MAX_ATOMS_PER_OUTPUT_LIST];
+        int length = s7_vector_length(s7_out_val);
+        for(int i=0; i<length; i++){
+            // if invalid type, return with error
+            s7_pointer *item = s7_vector_ref(s7, s7_out_val, i);
+            if( s7_is_number(item) || s7_is_boolean(item)){
+                s7_obj_to_atom(s7, item, &out_list[i]);
+            }else{
+                error("s4m: Vector output only supported for ints, floats, & booleans");
+                return s7_nil(s7);
+            }
+        }
+        // didn't hit an invalid type, we can output the list
+        outlet_anything( x->outlets[outlet_num], gensym("list"), length, out_list);     
+    } 
     // unhandled output type, post an error
-    //else{
-    //    error("s4m: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
-    //}
-    //// returns nil so that the console is not chatting on every output message
-    //return s7_nil(s7);
+    else{
+        error("s4m: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
+    }
+    // returns nil so that the console is not chatting on every output message
+    return s7_nil(s7);
 }
 
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
