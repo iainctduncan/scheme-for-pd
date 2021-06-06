@@ -22,15 +22,14 @@ void s4pd_s7_load(t_s4pd *x, char *full_path);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
-
 void s4pd_reset(t_s4pd *x);
 void s4pd_log_null(t_s4pd *x, t_floatarg f);
-
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
+
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
 
-// XXX: how are error codes handled in Pd??
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
 
 
@@ -114,7 +113,7 @@ s7_pointer atom_to_s7_obj(s7_scheme *s7, t_atom *ap){
             break;
          default:
             // unhandled types return an s7 nil
-            post("ERROR: unknown atom type (%ld)", ap->a_type);
+            post("s4pd: unhandled atom type (%ld)", ap->a_type);
             s7_obj = s7_nil(s7);
     }
     // post("returning s7 obj: %s", s7_object_to_c_string(s7, s7_obj));
@@ -162,7 +161,7 @@ int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom){
     return 0;
 }
 
-// get a opd struct pointer from the s7 environment pointer
+// get a pd struct pointer from the s7 environment pointer
 t_s4pd *get_pd_obj(s7_scheme *s7){
     // get our max object by reading the max pointer from the scheme environment
     uintptr_t s4pd_ptr_from_s7 = (uintptr_t)s7_integer( s7_name_to_value(s7, "pd-obj") );
@@ -180,6 +179,67 @@ static s7_pointer s7_post(s7_scheme *s7, s7_pointer args){
     return s7_nil(s7); 
 }
 
+// function to send a message to a receiver
+static s7_pointer s7_send(s7_scheme *s7, s7_pointer args){
+    post("s7_send, args: %s", s7_object_to_c_string(s7, args));
+    t_s4pd *x = get_pd_obj(s7);
+    // first arg must be a symbol for the receiver
+    int err;
+    char *receiver_name;
+    char *msg_symbol;
+    // where we look in s7 args for max method args, normally 2
+    int starting_arg = 2;   
+    // initialize return value to nil, as we need to return something to S7 even on errors
+    s7_pointer *s7_return_value = s7_nil(x->s7); 
+  
+    // get symbol from first s7 arg
+    if( s7_is_symbol( s7_car(args) ) ){ 
+        receiver_name = s7_symbol_name( s7_car(args) );
+    }else{
+        pd_error((t_object *)x, "s4pd: (send): arg 1 must be a symbol of a receiver name");
+        return s7_return_value;
+    }
+    if( ! gensym(receiver_name)->s_thing ){
+        pd_error((t_object *)x, "s4pd: (send): no receiver found");
+        return s7_return_value;
+    }
+   
+    // message to be sent could be an int, real, or symbol
+    // NB: in PD & Max, a message "1 2 3" is actually sent internally as "list 1 2 3"
+    if( s7_is_symbol( s7_cadr(args) ) ){ 
+        msg_symbol = s7_symbol_name( s7_cadr(args) );
+    }else if( s7_is_number( s7_cadr(args) ) ){
+        // if the first arg is a number, figure out if message is one number or a list
+        if( s7_list_length(s7, args) <= 2 ){
+            msg_symbol = "float";
+        }else{
+            msg_symbol = "list"; 
+        }
+        starting_arg = 1;
+    }else{
+        pd_error((t_object *)x, "s4pd: (send): arg 2 should be a symbol of the message to send");
+        return s7_return_value;
+    }
+    // loop through the args to build an atom list of the right length
+    // TODO learn how to do this correctly, and add error handling for over the limit yo
+    t_atom arg_atoms[ MAX_ATOMS_PER_MESSAGE ];
+    int num_atoms = s7_list_length(s7, args) - starting_arg;
+    // build arg list of atoms
+    for(int i=0; i < num_atoms; i++){
+        err = s7_obj_to_atom(s7, s7_list_ref(s7, args, i + starting_arg), arg_atoms + i );     
+        if(err){
+            pd_error((t_object *)x, "s4pd: (send): error converting Scheme arg to Pd atom, aborting");
+            return s7_return_value;
+        }
+    }
+    // now we can send the message to the receiver
+    //     err = object_method_typed(obj, gensym(msg_symbol), num_atoms, arg_atoms, NULL);
+    typedmess( gensym(receiver_name)->s_thing, gensym(msg_symbol), num_atoms, arg_atoms);
+    return s7_return_value;
+}
+
+
+
 // send output out an outlet
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     //post("s7_pd_output, args: %s", s7_object_to_c_string(s7, args));
@@ -190,7 +250,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
 
     // check if outlet number exists
     if( outlet_num > x->num_outlets || outlet_num < 0 ){
-        post("ERROR: invalid outlet number %i", outlet_num);
+        pd_error((t_object *)x, "ERROR: invalid outlet number %i", outlet_num);
         return s7_nil(s7);
     }
     s7_pointer s7_out_val = s7_cadr(args);
@@ -203,7 +263,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     if( s7_is_real(s7_out_val) || s7_is_boolean(s7_out_val) ){
         err = s7_obj_to_atom(s7, s7_out_val, &output_atom);
         if( err ){
-          post("error outputing %s", s7_object_to_c_string(s7, s7_out_val));
+          post("s4pd: error outputing %s", s7_object_to_c_string(s7, s7_out_val));
         }else{
           outlet_anything( x->outlets[outlet_num], gensym("float"), 1, &output_atom);
         }
@@ -215,7 +275,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
         // note that symbol catches keywords as well
         err = s7_obj_to_atom(s7, s7_out_val, &output_atom);
         if( err ){
-            post("  - error in s7_obj_to_atom, error outputing %s", s7_object_to_c_string(s7, s7_out_val));
+            post("s4pd: error outputing %s", s7_object_to_c_string(s7, s7_out_val));
         }else{
             // note that unlike Max, the output message is always "symbol {thing}"
             outlet_anything(x->outlets[outlet_num], gensym("symbol"), 1, &output_atom); 
@@ -260,7 +320,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
             if( s7_is_number(item) || s7_is_boolean(item)){
                 s7_obj_to_atom(s7, item, &out_list[i]);
             }else{
-                error("s4m: Vector output only supported for ints, floats, & booleans");
+                error("s4pd: Vector output only supported for ints, floats, & booleans");
                 return s7_nil(s7);
             }
         }
@@ -269,7 +329,7 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     } 
     // unhandled output type, post an error
     else{
-        error("s4m: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
+        error("s4pd: Unhandled output type %s", s7_object_to_c_string(s7, s7_out_val));
     }
     // returns nil so that the console is not chatting on every output message
     return s7_nil(s7);
@@ -308,6 +368,7 @@ void s4pd_init_s7(t_s4pd *x){
 
     s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
     s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
+    s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
