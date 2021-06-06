@@ -29,6 +29,7 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args);
 
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
 
@@ -181,7 +182,7 @@ static s7_pointer s7_post(s7_scheme *s7, s7_pointer args){
 
 // function to send a message to a receiver
 static s7_pointer s7_send(s7_scheme *s7, s7_pointer args){
-    post("s7_send, args: %s", s7_object_to_c_string(s7, args));
+    // post("s7_send, args: %s", s7_object_to_c_string(s7, args));
     t_s4pd *x = get_pd_obj(s7);
     // first arg must be a symbol for the receiver
     int err;
@@ -238,6 +239,50 @@ static s7_pointer s7_send(s7_scheme *s7, s7_pointer args){
     return s7_return_value;
 }
 
+
+// read a value from an Pd array
+static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args){
+    //post("s7_table_read, args: %s", s7_object_to_c_string(s7, args));
+    t_s4pd *x = get_pd_obj(s7);
+    // initialize return value to false, which means could not get value
+    s7_pointer *s7_return_value = s7_make_boolean(x->s7, false); 
+
+    char *array_name;
+    int  arr_index = 0;
+    t_garray *array;
+    int num_points;
+    t_word *values_vector;
+
+    // get and check array name and index point from s7_args
+    if( s7_is_symbol( s7_car(args) ) ){ 
+        array_name = s7_symbol_name( s7_car(args) );
+    }else{
+        pd_error((t_object *)x, "s4pd: (table-read): arg 1 must be a symbol of an array name");
+        return s7_return_value;
+    }
+    if( s7_is_number(s7_cadr(args))){
+        arr_index = s7_integer(s7_cadr(args)); 
+    }else{
+        pd_error((t_object *)x, "s4pd: (table-read): arg 2 must be an index");
+        return s7_return_value;
+    }
+    // get the array contents (altered from Pd's d_array.c)
+    if (!(array = (t_garray *)pd_findbyclass( gensym(array_name), garray_class))){
+        pd_error(x, "s4pd: no array named %s", array_name);
+        return s7_return_value;
+    }else if (!garray_getfloatwords(array, &num_points, &values_vector)){
+        pd_error(x, "s4pd: error in table-read reading %s", array_name);
+        return s7_return_value;
+    }
+    // check index in range
+    if( arr_index < 0 || arr_index >= num_points ){
+        pd_error((t_object *)x, "s4pd: (table-read): index out of range");
+        return s7_return_value;
+    }
+    // get our float and return to s7 
+    s7_return_value = s7_make_real(x->s7, values_vector[ arr_index ].w_float);  
+    return s7_return_value;
+}
 
 
 // send output out an outlet
@@ -369,6 +414,9 @@ void s4pd_init_s7(t_s4pd *x){
     s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
     s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
     s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
+
+    s7_define_function(x->s7, "table-read", s7_table_read, 2, 0, true, "read a point from an array");
+    s7_define_function(x->s7, "tabr", s7_table_read, 2, 0, true, "read a point from an array");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
