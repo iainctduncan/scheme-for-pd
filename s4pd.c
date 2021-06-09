@@ -17,7 +17,14 @@ typedef struct _s4pd {
     t_outlet *outlets[MAX_OUTLETS];
     t_symbol *filename;
 } t_s4pd;  
-   
+
+// struct used (as void pointer) for clock scheduling  
+typedef struct _s4pd_clock_callback {
+   t_s4pd obj;
+   t_symbol *handle; 
+} t_s4pd_clock_callback;
+
+ 
 void s4pd_s7_load(t_s4pd *x, char *full_path);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
@@ -31,6 +38,7 @@ static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_table_write(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args);
 
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
 
@@ -477,20 +485,19 @@ void s4pd_init_s7(t_s4pd *x){
     s7_define_function(x->s7, "table-write", s7_table_write, 3, 0, false, "write a point to an array");
     s7_define_function(x->s7, "tabw", s7_table_write, 3, 0, false, "write a point to an array");
 
+    s7_define_function(x->s7, "s4pd-schedule-delay", s7_schedule_delay, 2, 0, false, "schedule a delay callback");
+
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
-
-    // define our s4pd-eval function for compatability with s4m
-    s4pd_s7_eval_string(x, "(define s4pd-eval (lambda args (eval args (rootlet))))");
 
     post("... s4pd_init_s7() done");
 }
 
 
 void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
-    post("s4pd_new() ...");
+    post("s4pd_new(), argc: %i", argc);
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
@@ -503,7 +510,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     switch(argc){
       default:
       case 2:
-        x->filename = atom_getsymbol(argv+2);
+        x->filename = atom_getsymbol(argv+1);
       case 1:
         x->num_outlets = atom_getint(argv);
     }
@@ -513,9 +520,21 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
       x->outlets[i] = outlet_new(&x->x_obj, 0);
     }
 
-    s4pd_init_s7(x); 
-    post("... s4pd_new() done");
+    // set up the s7 interpreter
+    s4pd_init_s7(x);
+    // load the boostrap file
+    // XXX: isn't working with the Pd load path yet
+    s4pd_s7_load(x, "scm/s4pd.scm");
     x->log_return_values = true;
+
+    // if file arg used, load it
+    // XXX: isn't working with the Pd load path yet
+    if( x->filename->s_name ){
+      char load_str[256];
+      sprintf(load_str, "(load \"%s\")", x->filename->s_name); 
+      s4pd_s7_eval_string(x, load_str);
+    }
+    post("... s4pd_new() done");
     return (void *)x;  
 }  
  
@@ -606,10 +625,9 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
     }
 }
 
-/*
 // call s7_load, with error logging
 void s4pd_s7_load(t_s4pd *x, char *full_path){
-    // post("s4pd_s7_load() %s", full_path);
+    post("s4pd_s7_load() %s", full_path);
     int gc_loc;
     s7_pointer old_port;
     const char *errmsg = NULL;
@@ -626,11 +644,70 @@ void s4pd_s7_load(t_s4pd *x, char *full_path){
     s7_set_current_error_port(x->s7, old_port);
     s7_gc_unprotect_at(x->s7, gc_loc);
     if (msg){
-        object_error((t_object *)x, "s4pd Error loading %s: %s", full_path, msg);
+        pd_error((t_object *)x, "s4pd Error loading %s: %s", full_path, msg);
         free(msg);
     }else{
         // we don't run this in production as the res printed is the last line of
         // the file loaded, which looks weird to the user
     }
 }
-*/
+
+
+// generic clock callback, this fires for every delay call after being scheduled with a clock
+// gets access to the handle and s4pd obj through the clock_callback struct that it 
+// receives as a void pointer to a struct that contains the s4pd object and the cb handle 
+void s4pd_clock_callback(void *arg){
+    post("clock_callback()");
+    t_s4pd_clock_callback *ccb = (t_s4pd_clock_callback *) arg;
+    t_s4pd *x = &(ccb->obj);
+    t_symbol handle = *ccb->handle; 
+    post(" - handle %s", handle);
+    // call into scheme with the handle, where scheme will call the registered delayed function
+    s7_pointer *s7_args = s7_nil(x->s7);
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle.s_name), s7_args); 
+    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-execute-callback"), s7_args);   
+   
+    // TODO port this stuff 
+    // clean up the clock_callback info struct that was dynamically allocated when this was scheduled:
+    // remove the clock(s) from the clock (and quant) registry and free the cb struct
+    //hashtab_delete(x->clocks, &handle);
+    //hashtab_delete(x->clocks_quant, &handle);
+
+    // free the memory for the clock callback struct, we're done with that
+    //sysmem_freeptr(arg);
+}
+
+// delay a function using Pd clock objects for floating point precision delays
+// called from scheme as (s4pd-schedule-delay)
+static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args){
+    post("s7_schedule_delay()");
+    t_s4pd *x = get_pd_obj(s7);
+    char *cb_handle_str;
+    // first arg is float of time in ms 
+    double delay_time = s7_real( s7_car(args) );
+    // second arg is the symbol from the gensym call in Scheme
+    s7_pointer *s7_cb_handle = s7_cadr(args);
+    cb_handle_str = s7_symbol_name(s7_cb_handle);
+    post("s7_schedule_delay() time: %5.2f handle: '%s'", delay_time, cb_handle_str);
+
+    // dynmamically allocate memory for our struct that holds the symbol and the ref to the s4pd obj
+    // NB: this gets cleaned up by the receiver in the clock callback above when it fires
+    //t_s4pd_clock_callback *clock_cb_info = (t_s4pd_clock_callback *)sysmem_newptr(sizeof(t_s4pd_clock_callback));
+    //clock_cb_info->obj = *x;
+    //clock_cb_info->handle = gensym(cb_handle_str);
+    //// make a clock, setting our callback info struct as the owner, as void pointer
+    //// when the callback method fires, it will retrieve this pointer as an arg 
+    //// and use it to get the handle for calling into scheme  
+    //void *clock = clock_new( (void *)clock_cb_info, (t_method)s4pd_clock_callback);
+    //
+    //// TODO: store the clock ref - could this just be done in Scheme?
+    //// Max version: 
+    ////hashtab_store(x->clocks, gensym(cb_handle_str), clock);            
+    //
+    //// schedule the clock
+    //clock_fdelay(clock, delay_time);
+    // return the handle on success so that scheme code can save it for possibly cancelling later
+    return s7_make_symbol(s7, cb_handle_str);
+}
+
+
