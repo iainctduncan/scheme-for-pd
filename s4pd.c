@@ -699,30 +699,36 @@ void s4pd_s7_load(t_s4pd *x, char *full_path){
 // gets access to the handle and s4pd obj through the clock_callback struct that it 
 // receives as a void pointer to a struct that contains the s4pd object and the cb handle 
 void s4pd_clock_callback(void *arg){
-    post("clock_callback()");
+    //post("s4pd_clock_callback()");
     t_s4pd_clock_callback *ccb = (t_s4pd_clock_callback *) arg;
     t_s4pd *x = &(ccb->obj);
-    t_symbol handle = *ccb->handle; 
-    post(" - handle %s", handle);
+    t_symbol *handle = ccb->handle; 
+    //post(" - handle %s", handle->s_name);
     // call into scheme with the handle, where scheme will call the registered delayed function
     s7_pointer *s7_args = s7_nil(x->s7);
-    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle.s_name), s7_args); 
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle->s_name), s7_args); 
     s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-execute-callback"), s7_args);   
    
-    // TODO port this stuff 
     // clean up the clock_callback info struct that was dynamically allocated when this was scheduled:
-    // remove the clock(s) from the clock (and quant) registry and free the cb struct
-    //hashtab_delete(x->clocks, &handle);
-    //hashtab_delete(x->clocks_quant, &handle);
+    // right now we are storing these in the s7 side, which is a bit silly, should be
+    // in some hash-table type thing in C, but this was what I knew how to do reliably 
 
-    // free the memory for the clock callback struct, we're done with that
-    //sysmem_freeptr(arg);
+    // get the clock pointer back from the s7 registry
+    s7_args = s7_nil(x->s7);
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle->s_name), s7_args); 
+    s7_pointer s7_u_clock_ptr = s7_call(x->s7, s7_name_to_value(x->s7, "s4pd-clock-registry"), s7_args);
+    // it's an integer so cast back to a clock and free it
+    uintptr_t u_clock_ptr = (uintptr_t)s7_integer( s7_u_clock_ptr );
+    t_clock *clock_ptr = (t_clock *) u_clock_ptr;    
+    clock_free(clock_ptr);
+    // and free the memory for the clock callback struct, we're done with it
+    freebytes(arg, sizeof(arg));
 }
 
 // delay a function using Pd clock objects for floating point precision delays
 // called from scheme as (s4pd-schedule-delay)
 static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args){
-    post("s7_schedule_delay()");
+    //post("s7_schedule_delay()");
     t_s4pd *x = get_pd_obj(s7);
     char *cb_handle_str;
     // first arg is float of time in ms 
@@ -730,24 +736,31 @@ static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args){
     // second arg is the symbol from the gensym call in Scheme
     s7_pointer *s7_cb_handle = s7_cadr(args);
     cb_handle_str = s7_symbol_name(s7_cb_handle);
-    post("s7_schedule_delay() time: %5.2f handle: '%s'", delay_time, cb_handle_str);
+    //post("s7_schedule_delay() time: %5.2f handle: '%s'", delay_time, cb_handle_str);
 
-    // dynmamically allocate memory for our struct that holds the symbol and the ref to the s4pd obj
+    // dynamically allocate memory for our struct that holds the symbol and the ref to the s4pd obj
     // NB: this gets cleaned up by the receiver in the clock callback above when it fires
-    //t_s4pd_clock_callback *clock_cb_info = (t_s4pd_clock_callback *)sysmem_newptr(sizeof(t_s4pd_clock_callback));
-    //clock_cb_info->obj = *x;
-    //clock_cb_info->handle = gensym(cb_handle_str);
-    //// make a clock, setting our callback info struct as the owner, as void pointer
-    //// when the callback method fires, it will retrieve this pointer as an arg 
-    //// and use it to get the handle for calling into scheme  
-    //void *clock = clock_new( (void *)clock_cb_info, (t_method)s4pd_clock_callback);
-    //
-    //// TODO: store the clock ref - could this just be done in Scheme?
-    //// Max version: 
-    ////hashtab_store(x->clocks, gensym(cb_handle_str), clock);            
-    //
-    //// schedule the clock
-    //clock_fdelay(clock, delay_time);
+    t_s4pd_clock_callback *clock_cb_info = (t_s4pd_clock_callback *)getbytes(sizeof(t_s4pd_clock_callback));
+    clock_cb_info->obj = *x;
+    clock_cb_info->handle = gensym(cb_handle_str);
+    // make a clock, setting our callback info struct as the owner, as void pointer
+    // when the callback method fires, it will retrieve this pointer as an arg 
+    // and use it to get the handle for calling into scheme  
+    t_clock *clock = clock_new( (void *)clock_cb_info, (t_method)s4pd_clock_callback);
+
+    // next we store the clock ptr in Scheme (we need it to be able to clean up later)
+    // TODO: probably this should be in a C side hash-table later
+    // make version of the clock pointer that can be stored in Scheme:
+    uintptr_t u_clock_ptr = (uintptr_t)clock;
+ 
+    // args to s7 call should be '(clock-handle clock-pointer) 
+    s7_pointer *s7_args = s7_nil(x->s7);
+    s7_args = s7_cons(x->s7, s7_make_integer(x->s7, u_clock_ptr), s7_args); 
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, cb_handle_str), s7_args); 
+    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-register-clock"), s7_args);   
+    
+    // schedule the clock
+    clock_delay(clock, delay_time);
     // return the handle on success so that scheme code can save it for possibly cancelling later
     return s7_make_symbol(s7, cb_handle_str);
 }

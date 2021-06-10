@@ -1,13 +1,19 @@
 ;(post "schedule.scm")
 
-;; internal registry of callbacks registered by gensyms
+; internal registry of callbacks registered by gensyms
 (define s4pd-callback-registry (hash-table))
+; and for pd C clocks (as void ponters)
+(define s4pd-clock-registry (hash-table))
 
 (define (s4pd-register-callback cb-function)
   (let ((key (gensym)))
     ;(post "registering" cb-function "with key" key)
     (set! (s4pd-callback-registry key) cb-function)
     key))
+
+(define (s4pd-register-clock handle clock-ptr)
+  ;(post "registering pd clock:" handle clock-ptr)
+  (set! (s4pd-clock-registry handle) clock-ptr))
 
 ;; fetch a callback from the registry 
 (define (s4pd-get-callback key)
@@ -34,7 +40,7 @@
 ; public function to delay a function by time ms (int or float)
 ; returns the gensym callback key, which can be used to cancel it
 (define (delay time fun)
-  (post "(delay) time:" time "args:" arg)
+  (post "(delay) time:" time "fun:" fun)
   ;; register the callback and return the handle
   (let ((cb-handle (s4pd-register-callback fun)))
     ;; call the C ffi function and return the handle
