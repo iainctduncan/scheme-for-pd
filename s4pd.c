@@ -515,6 +515,17 @@ void s4pd_init_s7(t_s4pd *x){
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
 
+    // load the bootstrap file
+    // TODO: should it look for an s4pd in the working dir first??
+    s4pd_load_from_path(x, "s4pd.scm");
+    x->log_return_values = true;
+
+    // if file arg used, load it
+    if( x->filename != gensym("") ){
+      //post("loading file arg: %s", x->filename->s_name);
+      s4pd_load_from_path(x, x->filename->s_name);
+    }
+
     //post("... s4pd_init_s7() done");
 }
 
@@ -547,17 +558,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
 
     // set up the s7 interpreter
     s4pd_init_s7(x);
-    // load the boostrap file
-    // TODO: should it look for an s4pd in the working dir first??
-    s4pd_load_from_path(x, "s4pd.scm");
-    x->log_return_values = true;
-
-    // if file arg used, load it
-    if( x->filename != gensym("") ){
-      //post("loading file arg: %s", x->filename->s_name);
-      s4pd_load_from_path(x, x->filename->s_name);
-    }
-    //post("... s4pd_new() done");
+       //post("... s4pd_new() done");
     return (void *)x;  
 }  
  
@@ -575,8 +576,10 @@ void s4pd_setup(void) {
     class_addanything(s4pd_class, (t_method)s4pd_message);
 }
 
-void s4pd_reset(){
-    post("s4pd_reset() - not yet implemented");
+void s4pd_reset(t_s4pd *x){
+    post("s4pd_reset()");
+    s4pd_init_s7(x); 
+    post("s7 reinitialized"); 
 }
 
 void s4pd_log_null(t_s4pd *x, t_floatarg arg){
