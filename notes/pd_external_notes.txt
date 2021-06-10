@@ -1,0 +1,12 @@
+
+void outlet_anything(t_outlet *x, t_symbol *s, int argc, t_atom *argv);
+
+atom_string void atom_string(t_atom *a, char *buf, unsigned int bufsize);
+- Converts an atom a into a C-string buf. The memory to this char-Buffer has to be reserved manually and its length has to be declared in bufsize.
+
+- the 'textfile' object can be used to read in text files
+  x_textfile.c has its implementation
+
+useful https://forum.pdpatchrepo.info/topic/12846/sending-string-from-pd-to-processing/2 
+
+

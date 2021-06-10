@@ -1,0 +1,7 @@
+Page on clocking and delay
+
+- see clock stuff in https://puredata.info/dev/CodeSnippets
+
+- test by calling (schedule-delay 1000 'foo)
+
+ 

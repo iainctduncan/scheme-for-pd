@@ -1,21 +1,75 @@
-S4PD todo
+S4PD Notes 
+
+FEATURES
+- i/o of all the data types
+- eval off message
+- eval string
+- loading from file path
+- loading not from path
+- resetting interpreter
+- write and read single points to tables
+- scheduling - working 
+  - need to clean clocks out during reset though...
+
+- send message to a receiver
+- ? repeating clock ? 
+
+
+TODO
+- reset message
+  - it will need to free out the scheduler and shit
+- put functions on the scheduler
+- D read and write to arrays
+- switch error handling to pd_error
+
+FIGURE OUT:
+- all those warnings!!
+
+FUTURE
+- allow list output to ouput strings - ie don't cast strings to symbols necessarily
+- get paren symbol input working using binbuf concatenation
+
+BUGS:
+- crash when trying to send a vector: (send 'my-num #(1 2 3))
+- loading bad file on startup doesn't show that it didn't work
 
 DONE
-- basic atom_to_s7
+- equivalent of load-from-max
+- post output
+- list and vector output
+- basic atom_to_s7 (no dict recursion)
 - basic s7_to_atom
 - input of messages to s7 list
-
+- paren'd code input from messages with |fudi -u| -> |list to symbol|
+- D send messages
 
 BETA 1
-- do input and output
-- be able to read files, including nested loads
-- run scheme messages from pd messages
+- DONE? do input and output
+- DONE be able to read files, including nested loads - just works!
+- D run scheme messages from pd messages - works for no-parens messages
 - reset interpreter
-- log to console properly
+- D post command
+- list output not done yet
 
-LEFT
-- output of numbers working, but not for quoted symbols, WTF
-  - there is something different about this for pd, don't seem to be able to 
-    do same thing as max
-  - 
+ISSUE:
+- casting from ints to floats is going to be hard to work around
+- back tick commas?
+
+DIFFERENT 
+- there is no prelude file, might not even need one
+- post should just take all it's args, convert them to strings, concat, and print
+
+IN PROGRESS
+- list output - working except strings are cast to symbols
+  - not sure what it should be, symbols with quotes around them??
+
+For file loading:
+EXTERN int open_via_path(const char *dir, const char *name, const char *ext,
+    char *dirresult, char **nameresult, unsigned int size, int bin);
+- need to make a load from pd function with that chrome
+- see example in m_binbuf.c line 888
+
+IN PROGRESS:
+- got delay working
+- need to implement cancel_delay and add clock cleanup to the reset function
 
