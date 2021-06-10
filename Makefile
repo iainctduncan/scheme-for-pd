@@ -5,7 +5,7 @@
 # library name
 lib.name = s4pd
 
-cflags = -I . -L . -l s7
+cflags = -I . 
 
 # input source file (class name == source file basename)
 s4pd.class.sources = s4pd.c s7.c
