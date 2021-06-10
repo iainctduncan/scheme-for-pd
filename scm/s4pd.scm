@@ -2,7 +2,10 @@
 ; add to this file to create your bootstrap code
 ; removing functionality from this can can break s4pd, make a backup! 
 
-(post "s4pd.scm loading")
+;(post "s4pd.scm loading")
+
+(load-from-path "s74.scm")
+(load-from-path "s4pd-schedule.scm")
 
 ; eval function that runs in the root environment no matter where called
 (define s4pd-eval 
@@ -10,4 +13,4 @@
 
 
 
-(post "s4pd bootstrap complete")
+(post "s4pd.scm loaded")

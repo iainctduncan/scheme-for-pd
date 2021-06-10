@@ -25,7 +25,9 @@ typedef struct _s4pd_clock_callback {
 } t_s4pd_clock_callback;
 
  
+void s4pd_load_from_path(t_s4pd *x, char *filename);
 void s4pd_s7_load(t_s4pd *x, char *full_path);
+
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
@@ -33,6 +35,7 @@ void s4pd_reset(t_s4pd *x);
 void s4pd_log_null(t_s4pd *x, t_floatarg f);
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 
+static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
@@ -177,6 +180,25 @@ t_s4pd *get_pd_obj(s7_scheme *s7){
     uintptr_t s4pd_ptr_from_s7 = (uintptr_t)s7_integer( s7_name_to_value(s7, "pd-obj") );
     t_s4pd *s4pd_ptr = (t_s4pd *)s4pd_ptr_from_s7;
     return s4pd_ptr;
+}
+
+static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args){
+    t_s4pd *x = get_pd_obj(s7);
+    // get filename from s7
+    char *filename = s7_string( s7_car(args) );
+    //post("s7_load_from_path %s", filename);
+    // use open_via_path to get full path, but then don't load from the descriptor
+    int filedesc;
+    char buf[MAXPDSTRING], *bufptr;
+    char load_string[MAXPDSTRING];
+    if((filedesc = open_via_path("", filename, "", buf, &bufptr, MAXPDSTRING, 0)) < 0){
+        pd_error("%s: can't open", filename);
+        return s7_nil(s7);
+    }
+    close(filedesc);
+    sprintf(load_string, "(load \"%s/%s\")", buf, filename);
+    s4pd_s7_eval_string(x, load_string);
+    return s7_nil(s7);    
 }
 
 // function to send generic output out an outlet
@@ -472,10 +494,11 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
 }
 
 void s4pd_init_s7(t_s4pd *x){
-    post("s4pd_init_s7...");
+    //post("s4pd_init_s7()");
     // start the S7 interpreter 
     x->s7 = s7_init();
 
+    s7_define_function(x->s7, "load-from-path", s7_load_from_path, 1, 0, false, "load a file using the search path");
     s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
     s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
     s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
@@ -492,12 +515,12 @@ void s4pd_init_s7(t_s4pd *x){
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
 
-    post("... s4pd_init_s7() done");
+    //post("... s4pd_init_s7() done");
 }
 
 
 void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
-    post("s4pd_new(), argc: %i", argc);
+    //post("s4pd_new(), argc: %i", argc);
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
@@ -513,8 +536,10 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
         x->filename = atom_getsymbol(argv+1);
       case 1:
         x->num_outlets = atom_getint(argv);
+      case 0:
+        break;
     }
-    post(" - outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
+    post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
     // make the outlets
     for(int i = 0; i < x->num_outlets; i++){
       x->outlets[i] = outlet_new(&x->x_obj, 0);
@@ -523,18 +548,16 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     // set up the s7 interpreter
     s4pd_init_s7(x);
     // load the boostrap file
-    // XXX: isn't working with the Pd load path yet
-    s4pd_s7_load(x, "scm/s4pd.scm");
+    // TODO: should it look for an s4pd in the working dir first??
+    s4pd_load_from_path(x, "s4pd.scm");
     x->log_return_values = true;
 
     // if file arg used, load it
-    // XXX: isn't working with the Pd load path yet
-    if( x->filename->s_name ){
-      char load_str[256];
-      sprintf(load_str, "(load \"%s\")", x->filename->s_name); 
-      s4pd_s7_eval_string(x, load_str);
+    if( x->filename != gensym("") ){
+      //post("loading file arg: %s", x->filename->s_name);
+      s4pd_load_from_path(x, x->filename->s_name);
     }
-    post("... s4pd_new() done");
+    //post("... s4pd_new() done");
     return (void *)x;  
 }  
  
@@ -625,9 +648,25 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
     }
 }
 
-// call s7_load, with error logging
+// call s7_load using the pd searchpath
+void s4pd_load_from_path(t_s4pd *x, char *filename){
+    //post("s4pd_load_from_path() %s", filename);
+    // use open_via_path to get full path, but then don't load from the descriptor
+    int filedesc;
+    char buf[MAXPDSTRING], *bufptr;
+    char full_path[MAXPDSTRING];
+    if((filedesc = open_via_path("", filename, "", buf, &bufptr, MAXPDSTRING, 0)) < 0){
+        error("%s: can't open", filename);
+        return;    
+    }
+    close(filedesc);
+    sprintf(full_path, "%s/%s", buf, filename);
+    s4pd_s7_load(x, full_path);
+}
+
+// call s7_load using fullpath, with error logging
 void s4pd_s7_load(t_s4pd *x, char *full_path){
-    post("s4pd_s7_load() %s", full_path);
+    //post("s4pd_s7_load() %s", full_path);
     int gc_loc;
     s7_pointer old_port;
     const char *errmsg = NULL;
