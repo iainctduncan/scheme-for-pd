@@ -1,7 +1,0 @@
-#N canvas 585 23 681 555 12;
-#X text 673 538 comment;
-#X text 82 12 comment;
-#X obj 96 81 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
--1;
-#X obj 96 138 s4pd;
-#X connect 2 0 3 0;

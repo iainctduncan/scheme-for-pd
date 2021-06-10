@@ -1,0 +1,259 @@
+#N canvas 327 30 725 636 12;
+#X obj 19 160 fudiformat -u;
+#X obj 19 186 list tosymbol;
+#X obj 41 221 r s4pd_in;
+#N canvas 276 60 988 668 sending-from-outlets 0;
+#X msg 107 142 reset, f 6;
+#X obj 10 90 fudiformat -u;
+#X obj 10 116 list tosymbol;
+#X obj 10 169 s4pd;
+#X obj 19 141 r \$0_msg_in;
+#X obj 9 66 r \$0_code_in;
+#X msg 221 382 (out 0 (list 1 2 3));
+#X msg 223 411 (out 0 (list 'a :b "C"));
+#X msg 222 438 (out 0 (vector 1 2 3));
+#X obj 173 324 s \$0_msg_in;
+#X obj 172 198 s \$0_code_in;
+#X obj 8 196 print s4pd-out;
+#X msg 220 173 (out 0 "a string");
+#X msg 222 147 (out 0 'foobaz);
+#X msg 222 67 (out 0 1);
+#X msg 222 92 (out 0 1.1);
+#X msg 222 120 (out 0 :foobar);
+#X text 422 116 Quoted symbols \, keywords \, and strings are all sent
+as symbol messages;
+#X text 420 63 Send output from outlet 0;
+#X text 424 234 Plain messages work for non-nested expressions \, and
+non space separated strings;
+#X msg 220 294 out 0 "an error";
+#X obj 170 518 s \$0_code_in;
+#X msg 212 469 (out 0 (list 'list 'a 'b));
+#X msg 221 239 out 0 'hello-world;
+#X msg 221 266 out 0 "an-ok-string";
+#X text 429 436 Vectors are translated to lists;
+#X text 215 13 Sending values out an s4pd outlet. Click the message
+boxes and watch the console.;
+#X text 430 467 We can output a list that starts with the symbol 'list
+if you need a list selector.;
+#X text 430 522 I'm not sure that last example is correct/useful Pd
+behaviour. Please get in touch and tell me if not!;
+#X text 427 379 Output lists - they can be of mixed type.;
+#X connect 0 0 3 0;
+#X connect 1 0 2 0;
+#X connect 2 0 3 0;
+#X connect 3 0 11 0;
+#X connect 4 0 3 0;
+#X connect 5 0 1 0;
+#X connect 6 0 21 0;
+#X connect 7 0 21 0;
+#X connect 8 0 21 0;
+#X connect 12 0 10 0;
+#X connect 13 0 10 0;
+#X connect 14 0 10 0;
+#X connect 15 0 10 0;
+#X connect 16 0 10 0;
+#X connect 20 0 9 0;
+#X connect 22 0 21 0;
+#X connect 23 0 9 0;
+#X connect 24 0 9 0;
+#X restore 12 469 pd sending-from-outlets;
+#N canvas 393 154 613 357 array-io 0;
+#X obj 26 125 s code;
+#X msg 38 96 (tabw 'array-1 0 .5);
+#X msg 27 68 (post "array-1 0:" (tabr 'array-1 0));
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array-1 8 float 3;
+#A 0 0.5 0 0 0 0 0 0 0;
+#X coords 0 1 8 -1 200 140 1;
+#X restore 26 174 graph;
+#X text 26 23 Read and write to arrays with the tabr and tabw functions
+(more coming later!);
+#X connect 1 0 0 0;
+#X connect 2 0 0 0;
+#X restore 13 525 pd array-io;
+#N canvas 200 23 785 483 loading-files 1;
+#X msg 233 142 load "test-2.scm";
+#X msg 237 361 (load-from-path "test-3.scm");
+#X msg 232 117 load "scm/test-2.scm";
+#X msg 59 216 reset;
+#X obj 21 130 fudiformat -u;
+#X obj 21 157 list tosymbol;
+#X obj 21 106 r \$0_code;
+#X obj 32 182 r \$0_in;
+#X obj 172 247 s \$0_in;
+#X obj 155 414 s \$0_code;
+#X msg 233 198 load-from-path "test-2.scm";
+#X msg 233 225 load-from-path "test-3.scm";
+#X msg 236 310 (load "scm/test-2.scm");
+#X msg 237 336 (load "test-2.scm");
+#X msg 237 387 (load-from-path "test-2.scm");
+#X obj 20 253 s4pd;
+#X text 231 177 load-from-path searches the Pd file path.;
+#X text 228 97 load requires a correct path relative to working dir
+;
+#X text 369 143 <- a bad path shows an error;
+#X text 234 274 load and load-from-path are just Scheme functions \,
+the loading is done by the s7 interpreter.;
+#X text 21 12 Examples of loading files. In addition to specifying
+a file name as the 2nd argument to s4pd \, we can load files dynamically
+with Scheme code. Note that loading files this way does not reset the
+interpreter \, so multiple files can be loaded on top of each other.
+In s7 \, redefining is permitted., f 97;
+#X text 439 222 <- XXX: should show better error message!;
+#X connect 0 0 8 0;
+#X connect 1 0 9 0;
+#X connect 2 0 8 0;
+#X connect 3 0 15 0;
+#X connect 4 0 5 0;
+#X connect 5 0 15 0;
+#X connect 6 0 4 0;
+#X connect 7 0 15 0;
+#X connect 10 0 8 0;
+#X connect 11 0 8 0;
+#X connect 12 0 9 0;
+#X connect 13 0 9 0;
+#X connect 14 0 9 0;
+#X restore 12 418 pd loading-files;
+#N canvas 546 36 643 484 wireless-messages 0;
+#X floatatom 14 78 5 0 0 2 my-num my-num -;
+#X msg 14 135 :a :b, f 8;
+#X obj 85 305 s code;
+#X msg 150 82 (send 'my-num 99);
+#X floatatom 152 207 5 0 0 0 - - -;
+#X msg 152 228 (send 'my-num \$1);
+#X msg 151 281 (define dest 'my-num) \, (send dest 42);
+#X obj 14 107 r msg-1;
+#X msg 152 160 (send 'msg-1 'set 'a 'b 'c);
+#X msg 152 133 (send 'msg-1 'set 1 2 3);
+#X text 147 263 Make a var called dest and send to it.;
+#X text 150 112 Multiple arguments get sent as a Pd list;
+#X text 150 324 Doing the same as a plain Pd message.;
+#X obj 77 405 s s4pd_in;
+#X text 13 10 Send messages to named receivers with the send function.
+Receiver names should be quoted symbols or variables that point to
+those.;
+#X msg 153 374 send 'msg-1 'set var-1 var-2;
+#X msg 153 349 define var-1 :a \, define var-2 :b;
+#X text 398 350 <- click first!;
+#X text 147 62 Send a message to the receiver named my-num;
+#X text 150 189 Move the number to send messages!;
+#X connect 3 0 2 0;
+#X connect 4 0 5 0;
+#X connect 5 0 2 0;
+#X connect 6 0 2 0;
+#X connect 7 0 1 0;
+#X connect 8 0 2 0;
+#X connect 9 0 2 0;
+#X connect 15 0 13 0;
+#X connect 16 0 13 0;
+#X restore 13 498 pd wireless-messages;
+#X obj 19 136 r code;
+#X obj 230 327 s code;
+#X msg 230 304 (post "hello world!");
+#X msg 404 304 (out 0 (+ 1 2 3));
+#X floatatom 16 304 5 0 0 0 - - -;
+#X obj 17 268 s4pd 2 test.scm;
+#X msg 231 435 reset;
+#X obj 231 461 s s4pd_in;
+#X text 228 398 The reset message reboots the s7 intepreter and reloads
+s4pd.scm and the file used as an argument.;
+#X obj 368 590 s s4pd_in;
+#X msg 367 563 out 0 my-var;
+#X msg 230 563 define my-var 333;
+#X text 227 495 Sending s4pd a message that starts with a symbol will
+evaluate the message as Scheme code \, as if it's surrounded by parentheses.
+Any symbols will be taken to be variable names unless quoted. This
+allows easy one-liners.;
+#X symbolatom 66 304 11 0 0 0 - - -;
+#X msg 479 563 out 1 'quoted-sym;
+#X text 227 353 This can be used to send the s4pd object code from
+your editor by sending it as osc strings over the network.;
+#X text 223 228 To send s4pd Scheme code while it runs \, use fudiformat
+and tosymbol to convert it to one quoted string. s4pd interpets the
+'symbol' message as a request to evaluate the contents as Scheme.;
+#N canvas 695 156 687 543 scheduling-events 0;
+#X obj 20 143 s code;
+#X msg 20 114 (delay 1000.05 (lambda()(post :tada!)));
+#X connect 1 0 0 0;
+#X restore 13 551 pd scheduling-events;
+#N canvas 416 40 688 690 logging-to-console 0;
+#X obj 11 649 s s4pd_in;
+#X obj 12 264 s code;
+#X msg 12 238 (post "hello world" 1 1.2 :a-keyword);
+#X obj 14 365 s code;
+#X obj 13 485 s code;
+#X msg 14 435 (post (list 1 :two "three" '(:a :nested :list)));
+#X msg 14 340 (post 'symbol-1 (quote symbol-2) :a-keyword-is-a-symbol)
+;
+#X msg 13 573 post "this-one-is-ok" 1 2.25 'three :four;
+#X msg 21 597 post "this is not ok";
+#X msg 22 622 post "should\\\ be\\\ ok\\\,\\\ but\\\ buggy";
+#X text 6 10 Examples of posting to the Pd console. Note that these
+send to the s4pd instance of the parent patch., f 82;
+#X text 11 293 Posting quoted symbols prints the symbol name. Keywords
+start with a colon and are symbols that act like they are always quoted.
+;
+#X text 11 522 When posting from plain messages (not parenthesized
+code) \, strings without spaces are fine \, as they are still one atom
+to Pd \, but strings with spaces are buggy still (to be fixed);
+#X text 10 204 When sending parenthesized code \, we can post pretty
+much any type \, including use strings with spaces;
+#X text 11 400 Posting lists \, vectors \, hash-tables \, and pairs
+will use their printed repr with parens.;
+#X msg 23 459 (post (hash-table :a 1 :b 2 :c (cons :d :e)));
+#X obj 13 146 s s4pd-in;
+#X text 6 51 By default \, s4pd logs return values from evaluation
+to the Pd console \, including null values \, shown as (). You can
+turn these on and off with messsages to s4pd., f 82;
+#X msg 13 121 log-console \$1;
+#X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 140 145 s s4pd-in;
+#X obj 140 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+1;
+#X msg 140 120 log-null \$1;
+#X msg 268 119 (define var 1) \, (eval var);
+#X obj 268 145 s code;
+#X connect 2 0 1 0;
+#X connect 5 0 4 0;
+#X connect 6 0 3 0;
+#X connect 7 0 0 0;
+#X connect 8 0 0 0;
+#X connect 9 0 0 0;
+#X connect 15 0 4 0;
+#X connect 18 0 16 0;
+#X connect 19 0 18 0;
+#X connect 21 0 22 0;
+#X connect 22 0 20 0;
+#X connect 23 0 24 0;
+#X restore 12 443 pd logging-to-console;
+#X text 224 163 The s4pd object takes 2 optional arguments \, an integer
+for number of outlets \, and a filename to load \, searching the Pd
+filepath. It always loads the s4pd.scm bootstrap file first. You can
+change this file to create your own boot file.;
+#X obj 4 328 print s4pd-out;
+#X text 10 394 Click for more features:;
+#X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
+scripting and live coding Pd with Scheme Lisp. It is (mostly) compatible
+with Scheme for Max \, so if you've never used Scheme \, you might
+like the online "Learn Scheme For Max" e-book. Check the github page
+for further resources. Scheme for Pd was written by Iain C.T. Duncan
+\, and uses the s7 Scheme interpreter \, by Bill Schottstaedt at CCRMA.
+The main page is here: https://github.com/iainctduncan/scheme-for-pd
+, f 91;
+#X text 704 237;
+#X text 223 129 Basics: You'll want to watch the Pd console while trying
+these.;
+#X connect 0 0 1 0;
+#X connect 1 0 12 0;
+#X connect 2 0 12 0;
+#X connect 7 0 0 0;
+#X connect 9 0 8 0;
+#X connect 10 0 8 0;
+#X connect 12 0 11 0;
+#X connect 12 0 27 0;
+#X connect 12 1 20 0;
+#X connect 13 0 14 0;
+#X connect 17 0 16 0;
+#X connect 18 0 16 0;
+#X connect 21 0 16 0;
