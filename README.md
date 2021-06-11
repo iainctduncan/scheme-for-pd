@@ -1,6 +1,7 @@
 # scheme-for-pd
 Scheme for Pd (s4pd) is an open-source external for live-coding and scripting Pd 
-with an embedded s7 Scheme Lisp interpreter. 
+with an embedded s7 Scheme Lisp interpreter. It is a port of most of
+Scheme for Max, by the same author, for Max/MSP.
 
 ## Features in 0.1
 * run code from files or Max messages
@@ -33,6 +34,13 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
   uses pd-lib-builder, but possibly incorrectly
 * s4pd-help.pd is in the patchers dir, must be on file path I think
 * Scheme sources in scm dir, Pd will need to find s4pd.scm 
+
+## Documentation
+* Docs for s4pd do not yet exist, but the help file shows all features
+* Much of the documentation for Scheme for Max applies 
+  https://iainctduncan.github.io/scheme-for-max-docs/
+* The examples in the "Learn Scheme for Max" ebook should all work,
+  https://iainctduncan.github.io/learn-scheme-for-max/
 
 Please let me know in GitHub issues or on the GitHub discussion page if
 you find bugs, the help is unclear, or you have suggestions for building 
