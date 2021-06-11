@@ -1,7 +1,7 @@
-#N canvas 327 30 725 636 12;
+#N canvas 526 26 760 669 12;
 #X obj 19 160 fudiformat -u;
 #X obj 19 186 list tosymbol;
-#X obj 41 221 r s4pd_in;
+#X obj 27 221 r s4pd_in;
 #N canvas 276 60 988 668 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
@@ -71,7 +71,7 @@ behaviour. Please get in touch and tell me if not!;
 #X connect 1 0 0 0;
 #X connect 2 0 0 0;
 #X restore 13 525 pd array-io;
-#N canvas 200 23 785 483 loading-files 1;
+#N canvas 200 23 785 483 loading-files 0;
 #X msg 233 142 load "test-2.scm";
 #X msg 237 361 (load-from-path "test-3.scm");
 #X msg 232 117 load "scm/test-2.scm";
@@ -171,12 +171,51 @@ your editor by sending it as osc strings over the network.;
 #X text 223 228 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.;
-#N canvas 695 156 687 543 scheduling-events 0;
-#X obj 20 143 s code;
-#X msg 20 114 (delay 1000.05 (lambda()(post :tada!)));
-#X connect 1 0 0 0;
+#N canvas 591 81 887 578 scheduling-events 0;
+#X obj 23 105 s code;
+#X obj 24 205 s code;
+#X text 22 17 Schedule functions to run in the future with delay. Delay
+takes 2 args: time to delay in ms \, and a function that must be callable
+with no arguments., f 81;
+#X obj 22 336 s code;
+#X obj 409 65 loadbang;
+#X obj 407 109 s code;
+#X msg 408 87 (define my-var 99);
+#X msg 23 65 (define (post-my-var)(post 'my-var: my-var) \, (delay
+1000 post-my-var), f 46;
+#X text 21 144 To make a zero-argument function from some other function
+\, we can use lambda., f 51;
+#X msg 407 174 (set! my-var \$1);
+#X floatatom 407 149 5 0 0 0 - - -;
+#X obj 407 200 s code;
+#X text 456 148 Widget to change my-var;
+#X text 474 64 Ensure my-var defined;
+#X msg 24 180 (delay 4000 (lambda()(out 0 my-var)));
+#X msg 22 281 (delay 4000 (let ((captured-my-var my-var)) (lambda()(out
+0 captured-my-var)))), f 40;
+#X text 21 246 Capture the current value of my-var and use this in
+the future with a let-over-lambda closure., f 75;
+#X obj 22 468 s code;
+#X text 21 369 To use a function as it will be in the future \, we
+can wrap a call to eval in a lambda. Click on the right before the
+time elapses to define it.;
+#X floatatom 417 372 5 0 0 0 - - -;
+#X obj 417 421 s code;
+#X text 466 369 Widget to change my-var;
+#X msg 417 395 (define (future-fun)(out 0 \$1));
+#X msg 22 421 (delay 4000 (lambda()(eval '(future-fun)))), f 34;
+#X connect 4 0 6 0;
+#X connect 6 0 5 0;
+#X connect 7 0 0 0;
+#X connect 9 0 11 0;
+#X connect 10 0 9 0;
+#X connect 14 0 1 0;
+#X connect 15 0 3 0;
+#X connect 19 0 22 0;
+#X connect 22 0 20 0;
+#X connect 23 0 17 0;
 #X restore 13 551 pd scheduling-events;
-#N canvas 416 40 688 690 logging-to-console 0;
+#N canvas 646 29 688 690 logging-to-console 1;
 #X obj 11 649 s s4pd_in;
 #X obj 12 264 s code;
 #X msg 12 238 (post "hello world" 1 1.2 :a-keyword);
@@ -209,7 +248,7 @@ turn these on and off with messsages to s4pd., f 82;
 #X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X obj 140 145 s s4pd-in;
-#X obj 140 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 140 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X msg 140 120 log-null \$1;
 #X msg 268 119 (define var 1) \, (eval var);
@@ -233,6 +272,9 @@ filepath. It always loads the s4pd.scm bootstrap file first. You can
 change this file to create your own boot file.;
 #X obj 4 328 print s4pd-out;
 #X text 10 394 Click for more features:;
+#X text 704 237;
+#X text 223 129 Basics: You'll want to watch the Pd console while trying
+these.;
 #X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
 scripting and live coding Pd with Scheme Lisp. It is (mostly) compatible
 with Scheme for Max \, so if you've never used Scheme \, you might
@@ -240,10 +282,9 @@ like the online "Learn Scheme For Max" e-book. Check the github page
 for further resources. Scheme for Pd was written by Iain C.T. Duncan
 \, and uses the s7 Scheme interpreter \, by Bill Schottstaedt at CCRMA.
 The main page is here: https://github.com/iainctduncan/scheme-for-pd
-, f 91;
-#X text 704 237;
-#X text 223 129 Basics: You'll want to watch the Pd console while trying
-these.;
+Please report any bugs \, issues \, or suggestions on the github page
+as an issue., f 91;
+#X msg 104 221 reset;
 #X connect 0 0 1 0;
 #X connect 1 0 12 0;
 #X connect 2 0 12 0;
@@ -257,3 +298,4 @@ these.;
 #X connect 17 0 16 0;
 #X connect 18 0 16 0;
 #X connect 21 0 16 0;
+#X connect 32 0 12 0;

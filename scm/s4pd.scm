@@ -11,6 +11,4 @@
 (define s4pd-eval 
   (lambda args (eval args (rootlet))))
 
-
-
-(post "s4pd.scm loaded")
+;(post "s4pd.scm loaded")

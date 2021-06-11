@@ -577,7 +577,7 @@ void s4pd_setup(void) {
 }
 
 void s4pd_reset(t_s4pd *x){
-    post("s4pd_reset()");
+    //post("s4pd_reset()");
     s4pd_init_s7(x); 
     post("s7 reinitialized"); 
 }

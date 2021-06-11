@@ -40,7 +40,7 @@
 ; public function to delay a function by time ms (int or float)
 ; returns the gensym callback key, which can be used to cancel it
 (define (delay time fun)
-  (post "(delay) time:" time "fun:" fun)
+  ;(post "(delay) time:" time "fun:" fun)
   ;; register the callback and return the handle
   (let ((cb-handle (s4pd-register-callback fun)))
     ;; call the C ffi function and return the handle
@@ -62,6 +62,8 @@
 ;                  (lambda x (eval args)))))
 ;    (delay time cb-fun)))    
 
+; return null to not log the last function loaded
+'()
 
-(post "s4pd-schedule.scm loaded")
+;(post "s4pd-schedule.scm loaded")
 
