@@ -13,6 +13,12 @@ s4pd.class.sources = s4pd.c s7.c
 # all extra files to be included in binary distribution of the library
 datafiles = README.md
 
+datafiles += \
+  s4pd-help.pd \
+  $(wildcard scm/*.scm) \
+  $(empty)
+
+
 # include Makefile.pdlibbuilder from submodule directory 'pd-lib-builder'
 PDLIBBUILDER_DIR=pd-lib-builder/
 include $(PDLIBBUILDER_DIR)/Makefile.pdlibbuilder
