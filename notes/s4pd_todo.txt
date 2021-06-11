@@ -1,16 +1,23 @@
 S4PD Notes 
 
+BETA TODO:
+- cancel-delay
+- clear-delays
+- log messages - log null and log console
+- add scheduling tab to help
+- finish logging tab
+
+
 FEATURES
 - i/o of all the data types
 - eval off message
 - eval string
 - loading from file path
-- loading not from path
+- loading not from path - use "load"
 - resetting interpreter
 - write and read single points to tables
 - scheduling - working 
   - need to clean clocks out during reset though...
-
 - send message to a receiver
 - ? repeating clock ? 
 
@@ -72,4 +79,4 @@ EXTERN int open_via_path(const char *dir, const char *name, const char *ext,
 IN PROGRESS:
 - got delay working
 - need to implement cancel_delay and add clock cleanup to the reset function
-
+  - get all clocks I guess?

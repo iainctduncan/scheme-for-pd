@@ -1,0 +1,3 @@
+*.o
+*.pd_darwin
+build.sh
