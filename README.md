@@ -11,8 +11,8 @@ Scheme for Max, by the same author, for Max/MSP.
 * send messages to named receivers
 * schedule functions with **delay**
 
-Scheme-for-Pd uses S7 Scheme, an embeddable Scheme implementation by Bill Schottstaedt at CCRMA. 
-S7 is a minimal Scheme, with many nice features for algorithmic composition and embedding, 
+Scheme-for-Pd uses s7 Scheme, an embeddable Scheme implementation by Bill Schottstaedt at CCRMA. 
+s7 is a minimal Scheme, with many nice features for algorithmic composition and embedding, 
 and is the Scheme engine used in the Common Music algorithmic composition toolkit and the 
 Snd audio editor. It has keywords, Common Lisp style macros, first-class environments, 
 thread safety, applicative syntax, and a very straight forward FFI (foreign function interface).
@@ -51,4 +51,4 @@ thesis project, but you are encouraged to fork it if it's useful to you!
 
 Scheme for Pd was created by Iain C T Duncan.
 s7 Scheme was created by Bill Schottstaedt.
-As s7 is BSD licensed, so is Scheme for Pd. 
+Scheme for Pd and s7 are open source under the BSD license.
