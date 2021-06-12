@@ -1,7 +1,7 @@
-#N canvas 526 26 858 669 12;
+#N canvas 253 23 695 701 12;
 #X obj 19 160 fudiformat -u;
 #X obj 19 186 list tosymbol;
-#N canvas 276 60 988 668 sending-from-outlets 0;
+#N canvas 276 60 718 617 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
 #X obj 10 116 list tosymbol;
@@ -19,24 +19,24 @@
 #X msg 222 67 (out 0 1);
 #X msg 222 92 (out 0 1.1);
 #X msg 222 120 (out 0 :foobar);
-#X text 422 116 Quoted symbols \, keywords \, and strings are all sent
-as symbol messages;
-#X text 420 63 Send output from outlet 0;
-#X text 424 234 Plain messages work for non-nested expressions \, and
-non space separated strings;
+#X text 411 122 Quoted symbols \, keywords \, and strings are all sent
+as symbol messages, f 32;
+#X text 409 69 Send output from outlet 0;
+#X text 414 237 Plain messages work for non-nested expressions \, and
+non space separated strings, f 32;
 #X msg 220 294 out 0 "an error";
 #X obj 170 518 s \$0_code_in;
 #X msg 212 469 (out 0 (list 'list 'a 'b));
 #X msg 221 239 out 0 'hello-world;
 #X msg 221 266 out 0 "an-ok-string";
-#X text 429 436 Vectors are translated to lists;
+#X text 419 439 Vectors are translated to lists, f 32;
 #X text 215 13 Sending values out an s4pd outlet. Click the message
 boxes and watch the console.;
-#X text 430 467 We can output a list that starts with the symbol 'list
-if you need a list selector.;
-#X text 430 522 I'm not sure that last example is correct/useful Pd
-behaviour. Please get in touch and tell me if not!;
-#X text 427 379 Output lists - they can be of mixed type.;
+#X text 420 470 We can output a list that starts with the symbol 'list
+if you need a list selector., f 32;
+#X text 420 525 I'm not sure that last example is correct/useful Pd
+behaviour. Please get in touch and tell me if not!, f 32;
+#X text 417 382 Output lists - they can be of mixed type., f 32;
 #X connect 0 0 3 0;
 #X connect 1 0 2 0;
 #X connect 2 0 3 0;
@@ -127,7 +127,6 @@ In s7 \, redefining is permitted., f 97;
 #X text 147 263 Make a var called dest and send to it.;
 #X text 150 112 Multiple arguments get sent as a Pd list;
 #X text 150 324 Doing the same as a plain Pd message.;
-#X obj 77 405 s s4pd_in;
 #X text 13 10 Send messages to named receivers with the send function.
 Receiver names should be quoted symbols or variables that point to
 those.;
@@ -136,6 +135,7 @@ those.;
 #X text 398 350 <- click first!;
 #X text 147 62 Send a message to the receiver named my-num;
 #X text 150 189 Move the number to send messages!;
+#X obj 77 405 s s4pd-in;
 #X connect 3 0 2 0;
 #X connect 4 0 5 0;
 #X connect 5 0 2 0;
@@ -143,8 +143,8 @@ those.;
 #X connect 7 0 1 0;
 #X connect 8 0 2 0;
 #X connect 9 0 2 0;
-#X connect 15 0 13 0;
-#X connect 16 0 13 0;
+#X connect 14 0 19 0;
+#X connect 15 0 19 0;
 #X restore 13 498 pd wireless-messages;
 #X obj 19 136 r code;
 #X obj 230 327 s code;
@@ -153,10 +153,8 @@ those.;
 #X floatatom 16 304 5 0 0 0 - - -;
 #X obj 17 268 s4pd 2 test.scm;
 #X msg 231 435 reset;
-#X obj 231 461 s s4pd_in;
 #X text 228 398 The reset message reboots the s7 intepreter and reloads
 s4pd.scm and the file used as an argument.;
-#X obj 368 590 s s4pd_in;
 #X msg 367 563 out 0 my-var;
 #X msg 230 563 define my-var 333;
 #X text 227 495 Sending s4pd a message that starts with a symbol will
@@ -170,52 +168,73 @@ your editor by sending it as osc strings over the network.;
 #X text 223 228 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.;
-#N canvas 591 81 887 578 scheduling-events 0;
-#X obj 23 105 s code;
-#X obj 24 205 s code;
+#N canvas 442 23 682 769 scheduling-events 1;
+#X obj 23 122 s code;
+#X obj 25 454 s code;
+#X obj 23 582 s code;
+#X obj 409 82 loadbang;
+#X obj 407 126 s code;
+#X msg 408 104 (define my-var 99);
+#X text 22 393 To make a zero-argument function from some other function
+\, we can use lambda., f 51;
+#X msg 408 420 (set! my-var \$1);
+#X floatatom 408 395 5 0 0 0 - - -;
+#X obj 408 446 s code;
+#X text 457 394 Widget to change my-var;
+#X text 474 81 Ensure my-var defined;
+#X obj 23 705 s code;
+#X floatatom 259 658 5 0 0 0 - - -;
+#X obj 259 707 s code;
+#X msg 259 681 (define (future-fun)(out 0 \$1));
+#X obj 25 232 s code;
+#X text 22 160 Delay returns a handle we can use to cancel it, f 51
+;
+#X obj 24 353 s code;
+#X msg 37 327 (clear-delays);
+#X msg 23 82 (define (post-my-var)(post 'my-var: my-var)) \, (delay
+1000 post-my-var), f 46;
+#X msg 25 181 (define handle (delay 1000 (lambda()(out 0 my-var))))
+;
+#X msg 73 207 (cancel-delay handle);
+#X msg 162 327 reset;
+#X obj 162 352 s s4pd-in;
+#X msg 24 303 (delay 1000 (lambda()(post :one))) \, (delay 1500 (lambda()(post
+:two))), f 72;
+#X text 21 282 Cancel all running delays with clear-delay. resetting
+also clears all delays., f 78;
+#X msg 25 429 (delay 4000 (lambda()(out 0 my-var)));
+#X msg 23 527 (delay 4000 (let ((captured-my-var my-var)) (lambda()(out
+0 captured-my-var)))), f 40;
+#X text 22 492 Or capture the current value of my-var and use this
+in the future with a let-over-lambda closure. (try moving the widget!)
+, f 75;
+#X text 23 621 To use a *function* as it will be in the future \, we
+can wrap a call to eval in a lambda. Click on the right before the
+time elapses to define it., f 74;
+#X msg 23 658 (delay 4000 (lambda() (eval '(future-fun)))), f 26;
 #X text 22 17 Schedule functions to run in the future with delay. Delay
 takes 2 args: time to delay in ms \, and a function that must be callable
-with no arguments., f 81;
-#X obj 22 336 s code;
-#X obj 409 65 loadbang;
-#X obj 407 109 s code;
-#X msg 408 87 (define my-var 99);
-#X msg 23 65 (define (post-my-var)(post 'my-var: my-var) \, (delay
-1000 post-my-var), f 46;
-#X text 21 144 To make a zero-argument function from some other function
-\, we can use lambda., f 51;
-#X msg 407 174 (set! my-var \$1);
-#X floatatom 407 149 5 0 0 0 - - -;
-#X obj 407 200 s code;
-#X text 456 148 Widget to change my-var;
-#X text 474 64 Ensure my-var defined;
-#X msg 24 180 (delay 4000 (lambda()(out 0 my-var)));
-#X msg 22 281 (delay 4000 (let ((captured-my-var my-var)) (lambda()(out
-0 captured-my-var)))), f 40;
-#X text 21 246 Capture the current value of my-var and use this in
-the future with a let-over-lambda closure., f 75;
-#X obj 22 468 s code;
-#X text 21 369 To use a function as it will be in the future \, we
-can wrap a call to eval in a lambda. Click on the right before the
-time elapses to define it.;
-#X floatatom 417 372 5 0 0 0 - - -;
-#X obj 417 421 s code;
-#X text 466 369 Widget to change my-var;
-#X msg 417 395 (define (future-fun)(out 0 \$1));
-#X msg 22 421 (delay 4000 (lambda()(eval '(future-fun)))), f 34;
-#X connect 4 0 6 0;
-#X connect 6 0 5 0;
-#X connect 7 0 0 0;
-#X connect 9 0 11 0;
-#X connect 10 0 9 0;
-#X connect 14 0 1 0;
-#X connect 15 0 3 0;
-#X connect 19 0 22 0;
-#X connect 22 0 20 0;
-#X connect 23 0 17 0;
+with no arguments. Note that if have log-null on \, you will see the
+gensym handle for the delay instance logged to the console., f 88
+;
+#X text 316 660 Widget to change future-fun;
+#X connect 3 0 5 0;
+#X connect 5 0 4 0;
+#X connect 7 0 9 0;
+#X connect 8 0 7 0;
+#X connect 13 0 15 0;
+#X connect 15 0 14 0;
+#X connect 19 0 18 0;
+#X connect 20 0 0 0;
+#X connect 21 0 16 0;
+#X connect 22 0 16 0;
+#X connect 23 0 24 0;
+#X connect 25 0 18 0;
+#X connect 27 0 1 0;
+#X connect 28 0 2 0;
+#X connect 31 0 12 0;
 #X restore 13 551 pd scheduling-events;
-#N canvas 532 23 901 772 logging-to-console 1;
-#X obj 11 700 s s4pd_in;
+#N canvas 322 23 728 745 logging-to-console 0;
 #X obj 12 337 s code;
 #X msg 12 311 (post "hello world" 1 1.2 :a-keyword);
 #X obj 14 425 s code;
@@ -245,7 +264,7 @@ turn these on and off with messsages to s4pd., f 82;
 #X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
 #X obj 16 221 s s4pd-in;
-#X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
 #X obj 150 146 s code;
 #X text 10 277 When sending parenthesized code \, we can post pretty
@@ -262,19 +281,20 @@ if logging reply return values is on. Define returns the value defined
 <unspecified> \, or a gensym \, will only print to the console if log-null
 is on (off by default). gensyms are returned by delay calls \, so scheduling
 can log many of them.;
-#X connect 2 0 1 0;
-#X connect 5 0 4 0;
-#X connect 6 0 3 0;
-#X connect 7 0 0 0;
-#X connect 8 0 0 0;
-#X connect 9 0 0 0;
-#X connect 14 0 4 0;
-#X connect 17 0 25 0;
-#X connect 19 0 24 0;
-#X connect 23 0 22 0;
-#X connect 24 0 18 0;
-#X connect 25 0 15 0;
-#X connect 26 0 20 0;
+#X obj 11 700 s s4pd-in;
+#X connect 1 0 0 0;
+#X connect 4 0 3 0;
+#X connect 5 0 2 0;
+#X connect 6 0 28 0;
+#X connect 7 0 28 0;
+#X connect 8 0 28 0;
+#X connect 13 0 3 0;
+#X connect 16 0 24 0;
+#X connect 18 0 23 0;
+#X connect 22 0 21 0;
+#X connect 23 0 17 0;
+#X connect 24 0 14 0;
+#X connect 25 0 19 0;
 #X restore 12 443 pd logging-to-console;
 #X text 224 163 The s4pd object takes 2 optional arguments \, an integer
 for number of outlets \, and a filename to load \, searching the Pd
@@ -296,17 +316,19 @@ Please report any bugs \, issues \, or suggestions on the github page
 as an issue., f 91;
 #X msg 104 221 reset;
 #X obj 27 221 r s4pd-in;
+#X obj 230 461 s s4pd-in;
+#X obj 368 590 s s4pd-in;
 #X connect 0 0 1 0;
 #X connect 1 0 11 0;
 #X connect 6 0 0 0;
 #X connect 8 0 7 0;
 #X connect 9 0 7 0;
 #X connect 11 0 10 0;
-#X connect 11 0 26 0;
-#X connect 11 1 19 0;
-#X connect 12 0 13 0;
-#X connect 16 0 15 0;
-#X connect 17 0 15 0;
-#X connect 20 0 15 0;
-#X connect 31 0 11 0;
-#X connect 32 0 11 0;
+#X connect 11 0 24 0;
+#X connect 11 1 17 0;
+#X connect 12 0 31 0;
+#X connect 14 0 32 0;
+#X connect 15 0 32 0;
+#X connect 18 0 32 0;
+#X connect 29 0 11 0;
+#X connect 30 0 11 0;
