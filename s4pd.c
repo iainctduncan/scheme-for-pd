@@ -1,33 +1,40 @@
 #include "m_pd.h"  
 #include "string.h"
 #include "s7.h"
+#include "time.h"
  
 #define MAX_OUTLETS 32
 #define MAX_ATOMS_PER_MESSAGE 1024
 #define MAX_ATOMS_PER_OUTPUT_LIST 1024
 
 static t_class *s4pd_class;  
- 
+
+// struct used (as void pointer) for clock scheduling  
+typedef struct _s4pd_clock_info {
+   //t_s4pd *obj;
+   void *obj;
+   t_symbol *handle; 
+   t_clock *clock;
+   struct _s4pd_clock_info *previous;
+   struct _s4pd_clock_info *next;
+} t_s4pd_clock_info;
+
 typedef struct _s4pd {  
     t_object x_obj;
-    s7_scheme *s7;                  // pointer to the s7 instance
+    s7_scheme *s7;         // pointer to the s7 instance
     bool  log_repl;        // whether to automatically post return values from S7 interpreter to console
-    bool  log_null;                 // whether to log return values that are null, unspecified, or gensyms
+    bool  log_null;        // whether to log return values that are null, unspecified, or gensyms
     int   num_outlets;
     t_outlet *outlets[MAX_OUTLETS];
     t_symbol *filename;
+
+    t_s4pd_clock_info *first_clock;   // DUL of clocks 
+    t_s4pd_clock_info *last_clock;    // keep pointer to most recent clock
 } t_s4pd;  
 
-// struct used (as void pointer) for clock scheduling  
-typedef struct _s4pd_clock_callback {
-   t_s4pd obj;
-   t_symbol *handle; 
-} t_s4pd_clock_callback;
-
- 
+void s4pd_free(t_s4pd *x);
 void s4pd_load_from_path(t_s4pd *x, char *filename);
 void s4pd_s7_load(t_s4pd *x, char *full_path);
-
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
@@ -43,8 +50,14 @@ static s7_pointer s7_send(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_table_write(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_cancel_delay(s7_scheme *s7, s7_pointer args);
+static s7_pointer s7_cancel_clocks(s7_scheme *s7, s7_pointer args);
 
 int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
+
+void s4pd_clock_callback(void *arg);
+void s4pd_remove_clock(t_s4pd *x, t_s4pd_clock_info *clock_info);
+void s4pd_cancel_clocks(t_s4pd *x);
 
 
 /********************************************************************************/
@@ -498,7 +511,7 @@ void s4pd_init_s7(t_s4pd *x){
     //post("s4pd_init_s7()");
     // start the S7 interpreter 
     x->s7 = s7_init();
-
+    
     s7_define_function(x->s7, "load-from-path", s7_load_from_path, 1, 0, false, "load a file using the search path");
     s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
     s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
@@ -510,6 +523,9 @@ void s4pd_init_s7(t_s4pd *x){
     s7_define_function(x->s7, "tabw", s7_table_write, 3, 0, false, "write a point to an array");
 
     s7_define_function(x->s7, "s4pd-schedule-delay", s7_schedule_delay, 2, 0, false, "schedule a delay callback");
+    s7_define_function(x->s7, "s4pd-cancel-clocks", s7_cancel_clocks, 0, 0, false, "cancel all clocks");
+    // not in use right now, might bring it back later
+    //s7_define_function(x->s7, "s4pd-cancel-delay", s7_cancel_delay, 1, 0, false, "cancel and free a clock delay");
 
     // make the address of this object available in scheme as "pd-obj" so that 
     // scheme functions can get access to our C functions
@@ -539,6 +555,9 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     x->log_null = false;
     x->num_outlets = 1;
     x->filename = gensym("");
+    
+    // init the clock info pointer double linked list
+    x->first_clock = x->last_clock = NULL;
 
     // if args are given, they are: outlets, filename
     switch(argc){
@@ -550,7 +569,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
       case 0:
         break;
     }
-    post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
+    //post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
     // make the outlets
     for(int i = 0; i < x->num_outlets; i++){
       x->outlets[i] = outlet_new(&x->x_obj, 0);
@@ -563,22 +582,30 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
 }  
  
 void s4pd_setup(void) {  
-    s4pd_class = class_new(gensym("s4pd"),  
+    s4pd_class = class_new(
+        gensym("s4pd"),  
         (t_newmethod)s4pd_new, 
-        NULL, 
+        (t_method)s4pd_free, 
         sizeof(t_s4pd), 
         CLASS_DEFAULT, 
         A_GIMME,        // allow dynamic number of arguments
         0);  
-
     class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
     class_addmethod(s4pd_class, (t_method)s4pd_log_repl, gensym("log-repl"), A_DEFFLOAT, 0);
     class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_cancel_clocks, gensym("cancel-clocks"), 0);
     class_addanything(s4pd_class, (t_method)s4pd_message);
+}
+
+void s4pd_free(t_s4pd *x){
+    s4pd_cancel_clocks(x);
+    s4pd_init_s7(x);
 }
 
 void s4pd_reset(t_s4pd *x){
     //post("s4pd_reset()");
+    // cancel and free any outstanding delays by calling clear-delays in scheme
+    s4pd_cancel_clocks(x);
     s4pd_init_s7(x); 
     post("s7 reinitialized"); 
 }
@@ -709,35 +736,8 @@ void s4pd_s7_load(t_s4pd *x, char *full_path){
 }
 
 
-// generic clock callback, this fires for every delay call after being scheduled with a clock
-// gets access to the handle and s4pd obj through the clock_callback struct that it 
-// receives as a void pointer to a struct that contains the s4pd object and the cb handle 
-void s4pd_clock_callback(void *arg){
-    //post("s4pd_clock_callback()");
-    t_s4pd_clock_callback *ccb = (t_s4pd_clock_callback *) arg;
-    t_s4pd *x = &(ccb->obj);
-    t_symbol *handle = ccb->handle; 
-    //post(" - handle %s", handle->s_name);
-    // call into scheme with the handle, where scheme will call the registered delayed function
-    s7_pointer *s7_args = s7_nil(x->s7);
-    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle->s_name), s7_args); 
-    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-execute-callback"), s7_args);   
-   
-    // clean up the clock_callback info struct that was dynamically allocated when this was scheduled:
-    // right now we are storing these in the s7 side, which is a bit silly, should be
-    // in some hash-table type thing in C, but this was what I knew how to do reliably 
-
-    // get the clock pointer back from the s7 registry
-    s7_args = s7_nil(x->s7);
-    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle->s_name), s7_args); 
-    s7_pointer s7_u_clock_ptr = s7_call(x->s7, s7_name_to_value(x->s7, "s4pd-clock-registry"), s7_args);
-    // it's an integer so cast back to a clock and free it
-    uintptr_t u_clock_ptr = (uintptr_t)s7_integer( s7_u_clock_ptr );
-    t_clock *clock_ptr = (t_clock *) u_clock_ptr;    
-    clock_free(clock_ptr);
-    // and free the memory for the clock callback struct, we're done with it
-    freebytes(arg, sizeof(arg));
-}
+/*********************************************************************************
+* Scheduler and clock stuff */
 
 // delay a function using Pd clock objects for floating point precision delays
 // called from scheme as (s4pd-schedule-delay)
@@ -752,31 +752,120 @@ static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args){
     cb_handle_str = s7_symbol_name(s7_cb_handle);
     //post("s7_schedule_delay() time: %5.2f handle: '%s'", delay_time, cb_handle_str);
 
-    // dynamically allocate memory for our struct that holds the symbol and the ref to the s4pd obj
-    // NB: this gets cleaned up by the receiver in the clock callback above when it fires
-    t_s4pd_clock_callback *clock_cb_info = (t_s4pd_clock_callback *)getbytes(sizeof(t_s4pd_clock_callback));
-    clock_cb_info->obj = *x;
-    clock_cb_info->handle = gensym(cb_handle_str);
-    // make a clock, setting our callback info struct as the owner, as void pointer
+    //  allocate memory for the clock_info struct, holds gensym handle, ref to s4pd, and ref to clock 
+    // NB: this gets freed by clock callback after clock fires
+    t_s4pd_clock_info *clock_info = (t_s4pd_clock_info *)getbytes(sizeof(t_s4pd_clock_info));
+    clock_info->obj = (void *)x;
+    clock_info->handle = gensym(cb_handle_str);
+    // make a clock, setting our clock_info struct as the owner, as void pointer
     // when the callback method fires, it will retrieve this pointer as an arg 
     // and use it to get the handle for calling into scheme  
-    t_clock *clock = clock_new( (void *)clock_cb_info, (t_method)s4pd_clock_callback);
+    t_clock *clock = clock_new( (void *)clock_info, (t_method)s4pd_clock_callback);
+    // store the clock ref itself in there too
+    clock_info->clock = clock;
 
-    // next we store the clock ptr in Scheme (we need it to be able to clean up later)
-    // TODO: probably this should be in a C side hash-table later
-    // make version of the clock pointer that can be stored in Scheme:
-    uintptr_t u_clock_ptr = (uintptr_t)clock;
- 
-    // args to s7 call should be '(clock-handle clock-pointer) 
-    s7_pointer *s7_args = s7_nil(x->s7);
-    s7_args = s7_cons(x->s7, s7_make_integer(x->s7, u_clock_ptr), s7_args); 
-    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, cb_handle_str), s7_args); 
-    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-register-clock"), s7_args);   
-    
+    // put the new clock_info struct onto the clocks list at last place
+    // TODO refactor the queue insertion into a store clock function later
+    if(x->first_clock == NULL){ 
+        //post(" adding clock to queue as first");
+        // it's the only clock
+        x->first_clock = clock_info;
+        x->last_clock = clock_info;
+        clock_info->previous = NULL;
+        clock_info->next = NULL;
+    }else{
+        //post(" adding clock to queue as last");
+        // else insert at end of list
+        clock_info->previous = x->last_clock;
+        x->last_clock->next = clock_info;
+        clock_info->next = NULL;
+        x->last_clock = clock_info;
+    }
+
     // schedule the clock
     clock_delay(clock, delay_time);
     // return the handle on success so that scheme code can save it for possibly cancelling later
     return s7_make_symbol(s7, cb_handle_str);
 }
 
+// the callback that runs for any clock and is used to find the delayed function in Scheme
+void s4pd_clock_callback(void *arg){
+    // post("s4pd_clock_callback()");
+    t_s4pd_clock_info *clock_info = (t_s4pd_clock_info *) arg;
+    t_s4pd *x = (t_s4pd *)clock_info->obj;
+    t_symbol *handle = clock_info->handle; 
+    // post(" - handle %s", handle->s_name);
+    // call into scheme with the handle, where scheme will call the registered delayed function
+    s7_pointer *s7_args = s7_nil(x->s7);
+    s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, handle->s_name), s7_args); 
+    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-execute-callback"), s7_args);   
 
+    // clean up the clock stuff
+    // detach it from the double linked list, could be first, last, or middle
+    s4pd_remove_clock(x, clock_info); 
+    // free the clock 
+    clock_free(clock_info->clock);
+    // and free the clock info struct
+    freebytes(clock_info, sizeof( t_s4pd_clock_info ) );
+}
+
+
+// cancelling a single delay manually on C side
+// NOT IN USE RIGHT NOW - delays just harmlessly fire off and Scheme does nothing
+// might bring this back later with the new queue though
+/*
+static s7_pointer s7_cancel_delay(s7_scheme *s7, s7_pointer args){
+    post("s7_cancel_delay");
+    uintptr_t u_clock_info_ptr = (uintptr_t)s7_integer( s7_car(args) );
+    t_s4pd_clock_info *clock_info_ptr = (t_s4pd_clock_info *) u_clock_info_ptr;    
+
+    // free everything that was allocated for this delay instance
+
+    // 2021-06-12: any of these (even individually) will make it crash
+    // pd(99452,0x10cf1e5c0) malloc: *** error for object 0x106400110: pointer being freed was not allocated
+    clock_unset(clock_info_ptr->clock); 
+    clock_free(clock_info_ptr->clock);
+    freebytes(clock_info_ptr, sizeof(clock_info_ptr));
+}
+*/  
+
+// remove a clock_info pointer from the queue, updating queue head and tail
+// this just extracts the clock, which could be anywhere in the queue
+void s4pd_remove_clock(t_s4pd *x, t_s4pd_clock_info *clock_info){
+    if( x->first_clock == clock_info && x->last_clock == clock_info){
+        // case: only clock
+        x->first_clock = x->last_clock = NULL;
+    }else if( x->first_clock == clock_info ){
+        // case: it's the first clock and has a next
+        // new first clock pointer is this clock's next
+        clock_info->next->previous = NULL;
+        x->first_clock = clock_info->next;
+    }else if( x->last_clock == clock_info && clock_info->previous){
+        // case its the last clock, but has a previous
+        clock_info->previous->next = NULL;
+        x->last_clock = clock_info->previous;
+    }else {
+        // case, middle clock (no change to last or first pointer)
+        clock_info->previous->next = clock_info->next;
+        clock_info->next->previous = clock_info->previous;
+    }
+}
+
+void s4pd_cancel_clocks(t_s4pd *x){
+    //post("s4pd_cancel_clocks(): unsetting and freeing all clocks");
+    t_s4pd_clock_info *clock_info; 
+    while( clock_info = x->first_clock ){
+        s4pd_remove_clock(x, clock_info );
+        clock_unset( clock_info->clock );
+        clock_free( clock_info->clock );
+        freebytes(clock_info, sizeof(t_s4pd_clock_info));
+    }
+    //post(" - clocks removed");
+}
+
+// s7 method for cancelling clocks
+static s7_pointer s7_cancel_clocks(s7_scheme *s7, s7_pointer args){
+    //post("s7_cancel_clocks()");
+    t_s4pd *x = get_pd_obj(s7);
+    s4pd_cancel_clocks(x);
+}

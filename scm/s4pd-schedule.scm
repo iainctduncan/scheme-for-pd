@@ -2,18 +2,12 @@
 
 ; internal registry of callbacks registered by gensyms
 (define s4pd-callback-registry (hash-table))
-; and for pd C clocks (as void ponters)
-(define s4pd-clock-registry (hash-table))
 
 (define (s4pd-register-callback cb-function)
   (let ((key (gensym)))
     ;(post "registering" cb-function "with key" key)
     (set! (s4pd-callback-registry key) cb-function)
     key))
-
-(define (s4pd-register-clock handle clock-ptr)
-  ;(post "registering pd clock:" handle clock-ptr)
-  (set! (s4pd-clock-registry handle) clock-ptr))
 
 ;; fetch a callback from the registry 
 (define (s4pd-get-callback key)
@@ -49,21 +43,20 @@
 
 
 (define (cancel-delay key)
-  ;;(post "de-registering callback for key" key)
-  (set! (s4pd-callback-registry key) #f))
+  "cancel a clock by erasing its scheme callback"
+  ;(post "cancel-delay for key" key)
+  (set! (s4pd-callback-registry key) #f)
+  '())
 
-
-;; delay with either a list or var args, 
-;; i.e. (delay 1000 (list out 0 'bang)) or (delay-eval 1000 post :foo :bar)
-;(define (delay-eval time . args)
-;  ;;(post "delay-eval* time: " time "args: " list-arg)
-;  (let ((cb-fun (if (list? (car args)) 
-;                  (lambda x (eval (car args))) 
-;                  (lambda x (eval args)))))
-;    (delay time cb-fun)))    
-
-; return null to not log the last function loaded
-'()
+(define (clear-delays)
+  "cancel all scheduled delays"
+  ;(post "(clear-delays)")
+  (let ((delay-keys (map car s4pd-callback-registry)))
+    ;(post "delay-keys to clear:" delay-keys)
+    (for-each cancel-delay delay-keys)
+    (s4pd-cancel-clocks)
+    '()))
+      
 
 ;(post "s4pd-schedule.scm loaded")
 
