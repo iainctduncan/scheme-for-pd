@@ -47,7 +47,9 @@ Please note that I cannot take undiscussed pull requests at this time as this is
 thesis project, but forking is most welcome if it's useful to you.
 I am happy to discuss improvements and take contributions if they make sense. 
 
-Scheme for Pd was created by Iain C T Duncan.
+
+## Credits and License
+Scheme for Pd was created by Iain C T Duncan, 2021
 
 s7 Scheme was created by Bill Schottstaedt.
 
