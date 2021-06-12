@@ -44,9 +44,11 @@ you find bugs, the help is unclear, or you have suggestions for building
 and packaging properly.
 
 Please note that I cannot take undiscussed pull requests at this time as this is a
-thesis project, but forking is most welcome it if it's useful to you.
+thesis project, but forking is most welcome if it's useful to you.
 I am happy to discuss improvements and take contributions if they make sense. 
 
 Scheme for Pd was created by Iain C T Duncan.
+
 s7 Scheme was created by Bill Schottstaedt.
+
 Scheme for Pd and s7 are open source under the BSD-2 license.
