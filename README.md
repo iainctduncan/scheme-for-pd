@@ -4,7 +4,7 @@ with an embedded s7 Scheme Lisp interpreter. It is a port of most of
 Scheme for Max, by the same author, for Max/MSP.
 
 ## Features in 0.1
-* run code from files or Max messages
+* run code from files or Pd messages
 * load files using the Pd search path
 * output numbers, symbols, lists
 * basic array i/o
