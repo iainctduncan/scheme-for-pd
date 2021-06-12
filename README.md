@@ -19,36 +19,34 @@ thread safety, applicative syntax, and a very straight forward FFI (foreign func
 Linguistically, it is mostly R4RS with some later extensions, along with some features 
 from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
-## June 10, 2021 Status
+## June 12, 2021 Status
 * s4pd 0.1 is ready for testers who are able to build from source
 * master branch should always build, and s4pd-help.pd should work
-* log is chatty and the logging controls aren't finished
-* compiler issues buckets of warnings that I need to clean up
-* delaying events works, but clock clean up not yet implemented, meaning
-  if you reset or recreate s4pd with outstanding clocks running, it may crash
-* I really don't know Pd external packaging, but am putting up this version
-  so early testers can help me get that right
+* no features of s4pd except endless loops should make it crash, let me
+  know please if it does
+* compiler issues buckets of warnings that I need to clean up (later)
+* packaging for general releases is the next priority, advice welcome!
 
 ## Building & Testing
-* builds on my machine (OSX) with the build.sh script, which
-  uses pd-lib-builder, but possibly incorrectly
+* builds on my machine (OSX) using pd-lib-builder and Make
+* Scheme sources in scm dir, which must be on the Pd file path
 * s4pd-help.pd is in the patchers dir, must be on file path I think
-* Scheme sources in scm dir, Pd will need to find s4pd.scm 
 
 ## Documentation
 * Docs for s4pd do not yet exist, but the help file shows all features
 * Much of the documentation for Scheme for Max applies 
   https://iainctduncan.github.io/scheme-for-max-docs/
-* The examples in the "Learn Scheme for Max" ebook should all work,
+* The examples in the "Learn Scheme for Max" ebook should basically all work,
   https://iainctduncan.github.io/learn-scheme-for-max/
 
 Please let me know in GitHub issues or on the GitHub discussion page if
 you find bugs, the help is unclear, or you have suggestions for building 
 and packaging properly.
 
-Please note that I am not taking pull requests at this time as this is a
-thesis project, but you are encouraged to fork it if it's useful to you! 
+Please note that I cannot take undiscussed pull requests at this time as this is a
+thesis project, but forking is most welcome it if it's useful to you.
+I am happy to discuss improvements and take contributions if they make sense. 
 
 Scheme for Pd was created by Iain C T Duncan.
 s7 Scheme was created by Bill Schottstaedt.
-Scheme for Pd and s7 are open source under the BSD license.
+Scheme for Pd and s7 are open source under the BSD-2 license.
