@@ -1,7 +1,6 @@
-#N canvas 526 26 760 669 12;
+#N canvas 526 26 858 669 12;
 #X obj 19 160 fudiformat -u;
 #X obj 19 186 list tosymbol;
-#X obj 27 221 r s4pd_in;
 #N canvas 276 60 988 668 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
@@ -215,56 +214,67 @@ time elapses to define it.;
 #X connect 22 0 20 0;
 #X connect 23 0 17 0;
 #X restore 13 551 pd scheduling-events;
-#N canvas 646 29 688 690 logging-to-console 1;
-#X obj 11 649 s s4pd_in;
-#X obj 12 264 s code;
-#X msg 12 238 (post "hello world" 1 1.2 :a-keyword);
-#X obj 14 365 s code;
-#X obj 13 485 s code;
-#X msg 14 435 (post (list 1 :two "three" '(:a :nested :list)));
-#X msg 14 340 (post 'symbol-1 (quote symbol-2) :a-keyword-is-a-symbol)
+#N canvas 532 23 901 772 logging-to-console 1;
+#X obj 11 700 s s4pd_in;
+#X obj 12 337 s code;
+#X msg 12 311 (post "hello world" 1 1.2 :a-keyword);
+#X obj 14 425 s code;
+#X obj 13 558 s code;
+#X msg 14 508 (post (list 1 :two "three" '(:a :nested :list)));
+#X msg 14 400 (post 'symbol-1 (quote symbol-2) :a-keyword-is-a-symbol)
 ;
-#X msg 13 573 post "this-one-is-ok" 1 2.25 'three :four;
-#X msg 21 597 post "this is not ok";
-#X msg 22 622 post "should\\\ be\\\ ok\\\,\\\ but\\\ buggy";
+#X msg 13 646 post "this-one-is-ok" 1 2.25 'three :four;
+#X msg 21 670 post "this is not ok";
+#X msg 195 671 post "should\\\ be\\\ ok\\\,\\\ but\\\ buggy";
 #X text 6 10 Examples of posting to the Pd console. Note that these
 send to the s4pd instance of the parent patch., f 82;
-#X text 11 293 Posting quoted symbols prints the symbol name. Keywords
+#X text 11 366 Posting quoted symbols prints the symbol name. Keywords
 start with a colon and are symbols that act like they are always quoted.
-;
-#X text 11 522 When posting from plain messages (not parenthesized
+, f 67;
+#X text 11 595 When posting from plain messages (not parenthesized
 code) \, strings without spaces are fine \, as they are still one atom
-to Pd \, but strings with spaces are buggy still (to be fixed);
-#X text 10 204 When sending parenthesized code \, we can post pretty
-much any type \, including use strings with spaces;
-#X text 11 400 Posting lists \, vectors \, hash-tables \, and pairs
-will use their printed repr with parens.;
-#X msg 23 459 (post (hash-table :a 1 :b 2 :c (cons :d :e)));
+to Pd \, but strings with spaces are buggy still (to be fixed), f
+67;
+#X text 11 473 Posting lists \, vectors \, hash-tables \, and pairs
+will use their printed repr with parens., f 67;
+#X msg 23 532 (post (hash-table :a 1 :b 2 :c (cons :d :e)));
 #X obj 13 146 s s4pd-in;
 #X text 6 51 By default \, s4pd logs return values from evaluation
 to the Pd console \, including null values \, shown as (). You can
 turn these on and off with messsages to s4pd., f 82;
-#X msg 13 121 log-console \$1;
-#X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
-#X obj 140 145 s s4pd-in;
-#X obj 140 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 16 221 s s4pd-in;
+#X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X msg 140 120 log-null \$1;
-#X msg 268 119 (define var 1) \, (eval var);
-#X obj 268 145 s code;
+#X obj 150 146 s code;
+#X text 10 277 When sending parenthesized code \, we can post pretty
+much any type \, including strings with spaces;
+#X obj 150 219 s code;
+#X msg 150 196 (define n '());
+#X msg 16 196 log-null \$1;
+#X msg 13 121 log-repl \$1;
+#X msg 150 122 (define v 42);
+#X text 269 105 Evaluating an expression will print the value returned
+if logging reply return values is on. Define returns the value defined
+\, so we see 42 log-repl is on by default.;
+#X text 269 174 Evaluating expressions that return the null list \,
+<unspecified> \, or a gensym \, will only print to the console if log-null
+is on (off by default). gensyms are returned by delay calls \, so scheduling
+can log many of them.;
 #X connect 2 0 1 0;
 #X connect 5 0 4 0;
 #X connect 6 0 3 0;
 #X connect 7 0 0 0;
 #X connect 8 0 0 0;
 #X connect 9 0 0 0;
-#X connect 15 0 4 0;
-#X connect 18 0 16 0;
-#X connect 19 0 18 0;
-#X connect 21 0 22 0;
-#X connect 22 0 20 0;
-#X connect 23 0 24 0;
+#X connect 14 0 4 0;
+#X connect 17 0 25 0;
+#X connect 19 0 24 0;
+#X connect 23 0 22 0;
+#X connect 24 0 18 0;
+#X connect 25 0 15 0;
+#X connect 26 0 20 0;
 #X restore 12 443 pd logging-to-console;
 #X text 224 163 The s4pd object takes 2 optional arguments \, an integer
 for number of outlets \, and a filename to load \, searching the Pd
@@ -272,7 +282,7 @@ filepath. It always loads the s4pd.scm bootstrap file first. You can
 change this file to create your own boot file.;
 #X obj 4 328 print s4pd-out;
 #X text 10 394 Click for more features:;
-#X text 704 237;
+#X text 704 237 comment;
 #X text 223 129 Basics: You'll want to watch the Pd console while trying
 these.;
 #X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
@@ -285,17 +295,18 @@ The main page is here: https://github.com/iainctduncan/scheme-for-pd
 Please report any bugs \, issues \, or suggestions on the github page
 as an issue., f 91;
 #X msg 104 221 reset;
+#X obj 27 221 r s4pd-in;
 #X connect 0 0 1 0;
-#X connect 1 0 12 0;
-#X connect 2 0 12 0;
-#X connect 7 0 0 0;
-#X connect 9 0 8 0;
-#X connect 10 0 8 0;
-#X connect 12 0 11 0;
-#X connect 12 0 27 0;
-#X connect 12 1 20 0;
-#X connect 13 0 14 0;
-#X connect 17 0 16 0;
-#X connect 18 0 16 0;
-#X connect 21 0 16 0;
-#X connect 32 0 12 0;
+#X connect 1 0 11 0;
+#X connect 6 0 0 0;
+#X connect 8 0 7 0;
+#X connect 9 0 7 0;
+#X connect 11 0 10 0;
+#X connect 11 0 26 0;
+#X connect 11 1 19 0;
+#X connect 12 0 13 0;
+#X connect 16 0 15 0;
+#X connect 17 0 15 0;
+#X connect 20 0 15 0;
+#X connect 31 0 11 0;
+#X connect 32 0 11 0;

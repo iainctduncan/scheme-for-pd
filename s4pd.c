@@ -11,7 +11,7 @@ static t_class *s4pd_class;
 typedef struct _s4pd {  
     t_object x_obj;
     s7_scheme *s7;                  // pointer to the s7 instance
-    bool  log_return_values;        // whether to automatically post return values from S7 interpreter to console
+    bool  log_repl;        // whether to automatically post return values from S7 interpreter to console
     bool  log_null;                 // whether to log return values that are null, unspecified, or gensyms
     int   num_outlets;
     t_outlet *outlets[MAX_OUTLETS];
@@ -33,6 +33,7 @@ void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
 void s4pd_reset(t_s4pd *x);
 void s4pd_log_null(t_s4pd *x, t_floatarg f);
+void s4pd_log_repl(t_s4pd *x, t_floatarg f);
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 
 static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args);
@@ -518,7 +519,6 @@ void s4pd_init_s7(t_s4pd *x){
     // load the bootstrap file
     // TODO: should it look for an s4pd in the working dir first??
     s4pd_load_from_path(x, "s4pd.scm");
-    x->log_return_values = true;
 
     // if file arg used, load it
     if( x->filename != gensym("") ){
@@ -535,7 +535,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
-    x->log_return_values = false;
+    x->log_repl = false;
     x->log_null = false;
     x->num_outlets = 1;
     x->filename = gensym("");
@@ -572,6 +572,7 @@ void s4pd_setup(void) {
         0);  
 
     class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_log_repl, gensym("log-repl"), A_DEFFLOAT, 0);
     class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
     class_addanything(s4pd_class, (t_method)s4pd_message);
 }
@@ -583,13 +584,26 @@ void s4pd_reset(t_s4pd *x){
 }
 
 void s4pd_log_null(t_s4pd *x, t_floatarg arg){
-    post("log_null()");
+    //post("log_null()"); 
     x->log_null = (int) arg == 0 ? false : true;
-    post("x.log_null now: %i", x->log_null);
+    //post(" x.log_null now: %i", x->log_null);
+}
+
+void s4pd_log_repl(t_s4pd *x, t_floatarg arg){
+    //post("log_repl()"); 
+    x->log_repl = (int) arg == 0 ? false : true;
+    //post(" x.log_repl now: %i", x->log_repl);
 }
 
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res) {
+    // TODO add gensym filter
     char *log_out = s7_object_to_c_string(x->s7, res);
+    if(s7_is_null(x->s7, res) || s7_is_unspecified(x->s7, res)
+      || strstr(log_out, "{gensym}-")){ 
+      if( !x->log_repl || !x->log_null) return;
+    }else{
+      if(!x->log_repl) return;
+    }
     post("s4pd> %s", log_out);
 }
 
@@ -618,7 +632,7 @@ void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval){
         post("s4pd Error: %s", msg);
         free(msg);
     }else{
-        if(x->log_return_values) s4pd_post_s7_res(x, res);
+        if(x->log_repl) s4pd_post_s7_res(x, res);
     }
 }
 
@@ -647,7 +661,7 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
         free(msg);
     }else{
         //post(" res from call: %s", s7_object_to_c_string(x->s7, res));
-        if(x->log_return_values) s4pd_post_s7_res(x, res);
+        if(x->log_repl) s4pd_post_s7_res(x, res);
     }
 }
 
