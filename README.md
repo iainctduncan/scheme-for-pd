@@ -36,7 +36,7 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 * Docs for s4pd do not yet exist, but the help file shows all features
 * Much of the documentation for Scheme for Max applies 
   https://iainctduncan.github.io/scheme-for-max-docs/
-* The examples in the "Learn Scheme for Max" ebook should basically all work,
+* For people new to Scheme or Lisp, the  "Learn Scheme for Max" ebook is here
   https://iainctduncan.github.io/learn-scheme-for-max/
 
 Please let me know in GitHub issues or on the GitHub discussion page if
