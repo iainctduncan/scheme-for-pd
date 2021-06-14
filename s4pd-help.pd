@@ -1,4 +1,4 @@
-#N canvas 253 23 695 701 12;
+#N canvas 1169 -933 695 701 12;
 #X obj 19 160 fudiformat -u;
 #X obj 19 186 list tosymbol;
 #N canvas 276 60 718 617 sending-from-outlets 0;
@@ -168,56 +168,59 @@ your editor by sending it as osc strings over the network.;
 #X text 223 228 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.;
-#N canvas 442 23 682 769 scheduling-events 1;
-#X obj 23 122 s code;
-#X obj 25 454 s code;
-#X obj 23 582 s code;
-#X obj 409 82 loadbang;
-#X obj 407 126 s code;
-#X msg 408 104 (define my-var 99);
-#X text 22 393 To make a zero-argument function from some other function
+#N canvas 1270 -1015 861 802 scheduling-events 1;
+#X obj 21 163 s code;
+#X obj 23 495 s code;
+#X obj 21 611 s code;
+#X obj 407 123 loadbang;
+#X obj 405 167 s code;
+#X msg 406 145 (define my-var 99);
+#X text 20 434 To make a zero-argument function from some other function
 \, we can use lambda., f 51;
-#X msg 408 420 (set! my-var \$1);
-#X floatatom 408 395 5 0 0 0 - - -;
-#X obj 408 446 s code;
-#X text 457 394 Widget to change my-var;
-#X text 474 81 Ensure my-var defined;
-#X obj 23 705 s code;
-#X floatatom 259 658 5 0 0 0 - - -;
-#X obj 259 707 s code;
-#X msg 259 681 (define (future-fun)(out 0 \$1));
-#X obj 25 232 s code;
-#X text 22 160 Delay returns a handle we can use to cancel it, f 51
+#X msg 406 461 (set! my-var \$1);
+#X floatatom 406 436 5 0 0 0 - - -;
+#X obj 406 487 s code;
+#X text 455 435 Widget to change my-var;
+#X text 472 122 Ensure my-var defined;
+#X obj 21 732 s code;
+#X floatatom 257 685 5 0 0 0 - - -;
+#X obj 257 734 s code;
+#X msg 257 708 (define (future-fun)(out 0 \$1));
+#X obj 23 273 s code;
+#X text 20 201 Delay returns a handle we can use to cancel it, f 51
 ;
-#X obj 24 353 s code;
-#X msg 37 327 (clear-delays);
-#X msg 23 82 (define (post-my-var)(post 'my-var: my-var)) \, (delay
+#X obj 22 394 s code;
+#X msg 35 368 (clear-delays);
+#X msg 21 123 (define (post-my-var)(post 'my-var: my-var)) \, (delay
 1000 post-my-var), f 46;
-#X msg 25 181 (define handle (delay 1000 (lambda()(out 0 my-var))))
+#X msg 23 222 (define handle (delay 1000 (lambda()(out 0 my-var))))
 ;
-#X msg 73 207 (cancel-delay handle);
-#X msg 162 327 reset;
-#X obj 162 352 s s4pd-in;
-#X msg 24 303 (delay 1000 (lambda()(post :one))) \, (delay 1500 (lambda()(post
+#X msg 71 248 (cancel-delay handle);
+#X msg 160 368 reset;
+#X obj 160 393 s s4pd-in;
+#X msg 22 344 (delay 1000 (lambda()(post :one))) \, (delay 1500 (lambda()(post
 :two))), f 72;
-#X text 21 282 Cancel all running delays with clear-delay. resetting
+#X text 19 323 Cancel all running delays with clear-delay. resetting
 also clears all delays., f 78;
-#X msg 25 429 (delay 4000 (lambda()(out 0 my-var)));
-#X msg 23 527 (delay 4000 (let ((captured-my-var my-var)) (lambda()(out
-0 captured-my-var)))), f 40;
-#X text 22 492 Or capture the current value of my-var and use this
+#X text 20 533 Or capture the current value of my-var and use this
 in the future with a let-over-lambda closure. (try moving the widget!)
 , f 75;
-#X text 23 621 To use a *function* as it will be in the future \, we
+#X text 21 648 To use a *function* as it will be in the future \, we
 can wrap a call to eval in a lambda. Click on the right before the
 time elapses to define it., f 74;
-#X msg 23 658 (delay 4000 (lambda() (eval '(future-fun)))), f 26;
-#X text 22 17 Schedule functions to run in the future with delay. Delay
+#X text 314 687 Widget to change future-fun;
+#X msg 23 470 (delay 3000 (lambda()(out 0 my-var)));
+#X msg 21 568 (delay 3000 (let ((captured-my-var my-var)) (lambda()(out
+0 captured-my-var)))), f 54;
+#X msg 21 685 (delay 3000 (lambda() (eval '(future-fun)))), f 26;
+#X text 18 8 Schedule functions to run in the future with delay. Delay
 takes 2 args: time to delay in ms \, and a function that must be callable
 with no arguments. Note that if have log-null on \, you will see the
-gensym handle for the delay instance logged to the console., f 88
-;
-#X text 316 660 Widget to change future-fun;
+gensym handle for the delay instance logged to the console. Important:
+the delay function uses infrastructure defined in Scheme \, in s4pd-schedule.scm.
+If you did not ensure that the s4pd scm directory is on your Pd file
+path \, these will not work. If it loaded correctly \, the global variable
+s4pd-schedule-loaded will be #true., f 98;
 #X connect 3 0 5 0;
 #X connect 5 0 4 0;
 #X connect 7 0 9 0;
@@ -230,9 +233,9 @@ gensym handle for the delay instance logged to the console., f 88
 #X connect 22 0 16 0;
 #X connect 23 0 24 0;
 #X connect 25 0 18 0;
-#X connect 27 0 1 0;
-#X connect 28 0 2 0;
-#X connect 31 0 12 0;
+#X connect 30 0 1 0;
+#X connect 31 0 2 0;
+#X connect 32 0 12 0;
 #X restore 13 551 pd scheduling-events;
 #N canvas 322 23 728 745 logging-to-console 0;
 #X obj 12 337 s code;
@@ -261,10 +264,10 @@ will use their printed repr with parens., f 67;
 #X text 6 51 By default \, s4pd logs return values from evaluation
 to the Pd console \, including null values \, shown as (). You can
 turn these on and off with messsages to s4pd., f 82;
-#X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 13 100 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X obj 16 221 s s4pd-in;
-#X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X obj 150 146 s code;
 #X text 10 277 When sending parenthesized code \, we can post pretty

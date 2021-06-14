@@ -532,6 +532,8 @@ void s4pd_init_s7(t_s4pd *x){
     uintptr_t pd_obj_ptr = (uintptr_t)x;
     s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
 
+    s7_pointer load_flags = s7_eval_c_string(x->s7, "(begin (define s4pd-loaded #f) (define s4pd-schedule-loaded #f))");
+
     // load the bootstrap file
     // TODO: should it look for an s4pd in the working dir first??
     s4pd_load_from_path(x, "s4pd.scm");
@@ -542,7 +544,16 @@ void s4pd_init_s7(t_s4pd *x){
       s4pd_load_from_path(x, x->filename->s_name);
     }
 
-    //post("... s4pd_init_s7() done");
+    // check if the bootfiles loaded ok
+    s7_pointer loaded_ok = s7_eval_c_string(x->s7, "(and s4pd-loaded s4pd-schedule-loaded)");
+    if( !s7_boolean(x->s7, loaded_ok) ){
+        pd_error((t_object *)x, 
+"ERROR: s4pd.scm and s4pd-schedule.scm did not load.\n\
+Check that sp4d/scm dir is on your Pd file path.\n\
+The interpreter will run but the s74 additions and the delay function will not be working.");
+    }else{
+      post("s4pd initialized");
+    }
 }
 
 

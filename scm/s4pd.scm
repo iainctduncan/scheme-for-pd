@@ -11,4 +11,6 @@
 (define s4pd-eval 
   (lambda args (eval args (rootlet))))
 
+; flag to tell s4pd this loaded ok
+(define s4pd-loaded #t)
 ;(post "s4pd.scm loaded")

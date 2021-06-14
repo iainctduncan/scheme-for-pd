@@ -56,7 +56,9 @@
     (for-each cancel-delay delay-keys)
     (s4pd-cancel-clocks)
     '()))
-      
+
+; flag to tell s4pd this loaded ok
+(define s4pd-schedule-loaded #t)      
 
 ;(post "s4pd-schedule.scm loaded")
 

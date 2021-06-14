@@ -68,4 +68,4 @@
 ;; example of an error try catch
 ;;(catch #t (lambda () (/ 1.0 0)) (lambda args (post :foobar)))
 
-(post "s74.scm loaded")
+;(post "s74.scm loaded")
