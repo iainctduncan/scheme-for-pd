@@ -29,7 +29,8 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 * Compiler issues buckets of warnings that I need to clean up (later)
 
 ## Building & Testing
-* builds on my machine (OSX) using pd-lib-builder and Make
+* Builds on my machine (OSX) using pd-lib-builder and Make
+* Please let me know if you build successfully on Windows or Linux and I will update this section.
 * Scheme sources in scm dir, which must be on the Pd file path.
 * s4pd-help.pd is in the patchers dir, must be on file path I think
 
