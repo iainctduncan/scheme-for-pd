@@ -21,6 +21,7 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## June 12, 2021 Status
 * s4pd 0.1 is ready for testers who are able to build from source
+* pacacking is in progress, right now **you must have the scm dir on your Pd search path or various things won't work**. if the **delay** function turns up as an unbound variable, then sp4d is not finding your scm files.
 * master branch should always build, and s4pd-help.pd should work
 * no features of s4pd except endless loops should make it crash, let me
   know please if it does
