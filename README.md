@@ -4,12 +4,12 @@ with an embedded s7 Scheme Lisp interpreter. It is a port of most of
 Scheme for Max, by the same author, for Max/MSP.
 
 ## Features in 0.1
-* run code from files or Pd messages
-* load files using the Pd search path
+* run code from files, and hot reload files
+* evaluate scheme code from Pd messages with a REPL 
 * output numbers, symbols, lists
 * basic array i/o
 * send messages to named receivers
-* schedule functions with **delay**
+* schedule functions with delay
 
 Scheme-for-Pd uses s7 Scheme, an embeddable Scheme implementation by Bill Schottstaedt at CCRMA. 
 s7 is a minimal Scheme, with many nice features for algorithmic composition and embedding, 
@@ -21,7 +21,8 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## June 12, 2021 Status
 * s4pd 0.1 is ready for testers who are able to build from source
-* Pacacking is in progress, right now **you must have the s4pd/scm directory on your Pd search path or various things won't work**. If the **delay** function turns up as an unbound variable, then sp4d is not finding your scm files.
+* Packaging is in progress, right now **you must have the s4pd/scm directory on your Pd file path or various things won't work**. 
+  You should see error messages in the console when you instantiate s4pd if this is not done.
 * Master branch should always build, and s4pd-help.pd should work
 * No features of s4pd except endless loops should make it crash, let me
   know please if it does
