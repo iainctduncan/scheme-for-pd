@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "m_pd.h"  
 #include "string.h"
 #include "s7.h"
