@@ -1,0 +1,4 @@
+.vscode
+*.o
+*.pd_darwin
+*.swp
