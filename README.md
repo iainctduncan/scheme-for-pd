@@ -21,8 +21,8 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## Installation 
 * s4pd is available as source you can build, and as a beta release download for OSX only (windows to come)
-* If you install the release package, you should expand the tarball contents in your Pd/externals directory
-* If you build from source, you must ensure the scm files are on a path that Pd searches. You can add the scm directory to your Pd path preferences, or copy the scm files to a folder in externals along with the s4pd external object (so that they are in the same directory)
+* If you install the release package, you should expand the tarball contents in your Pd/externals directory. This includes all the scm files, so you should only need this directory to be on your Pd file search path (in File Preferences)
+* If you build from source, you must ensure the scm files are on a path that Pd searches. In the source, these are in their own scm directory. You can add the scm directory to your Pd path preferences, or copy the scm files to a folder in externals along with the s4pd external object (so that they are in the same directory), and ensure this directory is your search path.
 * If s4pd can't find the scm files, you will get warnings about this in the console. Just fix this as above and you should be good.
 
 ## Building from Source
