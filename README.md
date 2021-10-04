@@ -19,20 +19,18 @@ thread safety, applicative syntax, and a very straight forward FFI (foreign func
 Linguistically, it is mostly R4RS with some later extensions, along with some features 
 from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
-## June 12, 2021 Status
-* s4pd 0.1 is ready for testers who are able to build from source
-* Packaging is in progress, right now **you must have the s4pd/scm directory on your Pd file path or various things won't work**. 
-  You should see error messages in the console when you instantiate s4pd if this is not done.
-* Master branch should always build, and s4pd-help.pd should work
-* No features of s4pd except endless loops should make it crash, let me
-  know please if it does
-* Compiler issues buckets of warnings that I need to clean up (later)
+## Installation 
+* s4pd is available as source you can build, and as a beta release download for OSX only (windows to come)
+* If you install the release package, you should expand the tarball contents in your Pd/externals directory
+* If you build from source, you must ensure the scm files are on a path that Pd searches. You can add the scm directory to your Pd path preferences, or copy the scm files to a folder in externals along with the s4pd external object (so that they are in the same directory)
+* If s4pd can't find the scm files, you will get warnings about this in the console. Just fix this as above and you should be good.
 
-## Building & Testing
+## Building from Source
 * Builds on my machine (OSX) using pd-lib-builder and Make
 * Please let me know if you build successfully on Windows or Linux and I will update this section.
-* Scheme sources in scm dir, which must be on the Pd file path.
+* Scheme sources in scm dir: this dir must be on the Pd file path.
 * s4pd-help.pd is in the patchers dir, must be on file path I think
+* If there is a windows dev who can help with windows releases, please get in touch
 
 ## Documentation
 * Docs for s4pd do not yet exist, but the help file shows all features
