@@ -53,7 +53,7 @@ I am happy to discuss improvements and take contributions if they make sense.
 ## Credits and License
 Scheme for Pd was created by Iain C T Duncan, 2021
 
-s7 Scheme was created by Bill Schottstaedt.
+s7 Scheme was created by Bill Schottstaedt, based originally on Tiny Scheme.
 
 Scheme for Pd and s7 are open source under the BSD-2 license. 
 You may use these in whatever kind of project you wish!

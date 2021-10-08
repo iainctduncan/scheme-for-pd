@@ -1,6 +1,7 @@
-#N canvas 1169 -933 695 701 12;
-#X obj 19 160 fudiformat -u;
-#X obj 19 186 list tosymbol;
+#N canvas 245 31 962 795 12;
+#X declare -path s4pd;
+#X obj 18 178 fudiformat -u;
+#X obj 18 204 list tosymbol;
 #N canvas 276 60 718 617 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
@@ -55,7 +56,7 @@ behaviour. Please get in touch and tell me if not!, f 32;
 #X connect 22 0 21 0;
 #X connect 23 0 9 0;
 #X connect 24 0 9 0;
-#X restore 12 469 pd sending-from-outlets;
+#X restore 11 487 pd sending-from-outlets;
 #N canvas 393 154 613 357 array-io 0;
 #X obj 26 125 s code;
 #X msg 38 96 (tabw 'array-1 0 .5);
@@ -69,50 +70,37 @@ behaviour. Please get in touch and tell me if not!, f 32;
 (more coming later!);
 #X connect 1 0 0 0;
 #X connect 2 0 0 0;
-#X restore 13 525 pd array-io;
-#N canvas 200 23 785 483 loading-files 0;
-#X msg 233 142 load "test-2.scm";
-#X msg 237 361 (load-from-path "test-3.scm");
-#X msg 232 117 load "scm/test-2.scm";
+#X restore 12 543 pd array-io;
+#N canvas 420 103 785 584 loading-files 0;
 #X msg 59 216 reset;
 #X obj 21 130 fudiformat -u;
 #X obj 21 157 list tosymbol;
 #X obj 21 106 r \$0_code;
 #X obj 32 182 r \$0_in;
-#X obj 172 247 s \$0_in;
-#X obj 155 414 s \$0_code;
-#X msg 233 198 load-from-path "test-2.scm";
-#X msg 233 225 load-from-path "test-3.scm";
-#X msg 236 310 (load "scm/test-2.scm");
-#X msg 237 336 (load "test-2.scm");
-#X msg 237 387 (load-from-path "test-2.scm");
+#X obj 175 213 s \$0_in;
+#X obj 172 333 s \$0_code;
+#X msg 172 305 (load-from-path "test-2.scm");
 #X obj 20 253 s4pd;
-#X text 231 177 load-from-path searches the Pd file path.;
-#X text 228 97 load requires a correct path relative to working dir
-;
-#X text 369 143 <- a bad path shows an error;
-#X text 234 274 load and load-from-path are just Scheme functions \,
-the loading is done by the s7 interpreter.;
 #X text 21 12 Examples of loading files. In addition to specifying
 a file name as the 2nd argument to s4pd \, we can load files dynamically
 with Scheme code. Note that loading files this way does not reset the
 interpreter \, so multiple files can be loaded on top of each other.
 In s7 \, redefining is permitted., f 97;
-#X text 439 222 <- XXX: should show better error message!;
+#X msg 175 182 load-from-path "help-1.scm";
+#X text 172 100 load-from-path searches the Pd file paths. You should
+set these up with your file preferences or use a "declare -path".;
+#X obj 174 153 declare -path s4pd;
+#X text 171 254 load-from-path is a just Scheme functions \, the loading
+is done by the s7 interpreter. You can use it in your Scheme files
+to load other modules.;
 #X connect 0 0 8 0;
-#X connect 1 0 9 0;
+#X connect 1 0 2 0;
 #X connect 2 0 8 0;
-#X connect 3 0 15 0;
-#X connect 4 0 5 0;
-#X connect 5 0 15 0;
-#X connect 6 0 4 0;
-#X connect 7 0 15 0;
-#X connect 10 0 8 0;
-#X connect 11 0 8 0;
-#X connect 12 0 9 0;
-#X connect 13 0 9 0;
-#X connect 14 0 9 0;
-#X restore 12 418 pd loading-files;
+#X connect 3 0 1 0;
+#X connect 4 0 8 0;
+#X connect 7 0 6 0;
+#X connect 10 0 5 0;
+#X restore 11 436 pd loading-files;
 #N canvas 546 36 643 484 wireless-messages 0;
 #X floatatom 14 78 5 0 0 2 my-num my-num -;
 #X msg 14 135 :a :b, f 8;
@@ -145,30 +133,29 @@ those.;
 #X connect 9 0 2 0;
 #X connect 14 0 19 0;
 #X connect 15 0 19 0;
-#X restore 13 498 pd wireless-messages;
-#X obj 19 136 r code;
-#X obj 230 327 s code;
-#X msg 230 304 (post "hello world!");
-#X msg 404 304 (out 0 (+ 1 2 3));
-#X floatatom 16 304 5 0 0 0 - - -;
-#X obj 17 268 s4pd 2 test.scm;
-#X msg 231 435 reset;
-#X text 228 398 The reset message reboots the s7 intepreter and reloads
+#X restore 12 516 pd wireless-messages;
+#X obj 18 154 r code;
+#X obj 229 345 s code;
+#X msg 229 322 (post "hello world!");
+#X msg 403 322 (out 0 (+ 1 2 3));
+#X floatatom 15 322 5 0 0 0 - - -;
+#X msg 230 453 reset;
+#X text 227 416 The reset message reboots the s7 intepreter and reloads
 s4pd.scm and the file used as an argument.;
-#X msg 367 563 out 0 my-var;
-#X msg 230 563 define my-var 333;
-#X text 227 495 Sending s4pd a message that starts with a symbol will
+#X msg 366 581 out 0 my-var;
+#X msg 229 581 define my-var 333;
+#X text 226 513 Sending s4pd a message that starts with a symbol will
 evaluate the message as Scheme code \, as if it's surrounded by parentheses.
 Any symbols will be taken to be variable names unless quoted. This
 allows easy one-liners.;
-#X symbolatom 66 304 11 0 0 0 - - -;
-#X msg 479 563 out 1 'quoted-sym;
-#X text 227 353 This can be used to send the s4pd object code from
+#X symbolatom 65 322 11 0 0 0 - - -;
+#X msg 478 581 out 1 'quoted-sym;
+#X text 226 371 This can be used to send the s4pd object code from
 your editor by sending it as osc strings over the network.;
-#X text 223 228 To send s4pd Scheme code while it runs \, use fudiformat
+#X text 222 246 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.;
-#N canvas 1270 -1015 861 802 scheduling-events 1;
+#N canvas 579 23 861 802 scheduling-events 0;
 #X obj 21 163 s code;
 #X obj 23 495 s code;
 #X obj 21 611 s code;
@@ -236,7 +223,7 @@ s4pd-schedule-loaded will be #true., f 98;
 #X connect 30 0 1 0;
 #X connect 31 0 2 0;
 #X connect 32 0 12 0;
-#X restore 13 551 pd scheduling-events;
+#X restore 12 569 pd scheduling-events;
 #N canvas 322 23 728 745 logging-to-console 0;
 #X obj 12 337 s code;
 #X msg 12 311 (post "hello world" 1 1.2 :a-keyword);
@@ -298,40 +285,49 @@ can log many of them.;
 #X connect 23 0 17 0;
 #X connect 24 0 14 0;
 #X connect 25 0 19 0;
-#X restore 12 443 pd logging-to-console;
-#X text 224 163 The s4pd object takes 2 optional arguments \, an integer
+#X restore 11 461 pd logging-to-console;
+#X text 223 181 The s4pd object takes 2 optional arguments \, an integer
 for number of outlets \, and a filename to load \, searching the Pd
 filepath. It always loads the s4pd.scm bootstrap file first. You can
 change this file to create your own boot file.;
-#X obj 4 328 print s4pd-out;
-#X text 10 394 Click for more features:;
-#X text 704 237 comment;
-#X text 223 129 Basics: You'll want to watch the Pd console while trying
+#X obj 3 346 print s4pd-out;
+#X text 9 412 Click for more features:;
+#X text 222 147 Basics: You'll want to watch the Pd console while trying
 these.;
+#X msg 103 239 reset;
+#X obj 26 239 r s4pd-in;
+#X obj 229 479 s s4pd-in;
+#X obj 367 608 s s4pd-in;
+#X obj 16 285 s4pd 2 help-1.scm;
+#X obj 379 723 s s4pd-in;
+#X text 226 643 The examples below execute evaluate exactly the same
+as the above. (Note that a different send/receive is used.);
+#X msg 501 691 (out 1 'quoted-sym);
+#X msg 379 689 (out 0 my-var);
+#X msg 227 689 (define my-var 333);
 #X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
 scripting and live coding Pd with Scheme Lisp. It is (mostly) compatible
 with Scheme for Max \, so if you've never used Scheme \, you might
-like the online "Learn Scheme For Max" e-book. Check the github page
+like the online "Learn Scheme For Max" e-book. Check the GitHub page
 for further resources. Scheme for Pd was written by Iain C.T. Duncan
 \, and uses the s7 Scheme interpreter \, by Bill Schottstaedt at CCRMA.
 The main page is here: https://github.com/iainctduncan/scheme-for-pd
-Please report any bugs \, issues \, or suggestions on the github page
+Please report any bugs \, issues \, or suggestions on the GitHub page
 as an issue., f 91;
-#X msg 104 221 reset;
-#X obj 27 221 r s4pd-in;
-#X obj 230 461 s s4pd-in;
-#X obj 368 590 s s4pd-in;
 #X connect 0 0 1 0;
-#X connect 1 0 11 0;
+#X connect 1 0 30 0;
 #X connect 6 0 0 0;
 #X connect 8 0 7 0;
 #X connect 9 0 7 0;
-#X connect 11 0 10 0;
-#X connect 11 0 24 0;
-#X connect 11 1 17 0;
-#X connect 12 0 31 0;
-#X connect 14 0 32 0;
-#X connect 15 0 32 0;
-#X connect 18 0 32 0;
-#X connect 29 0 11 0;
-#X connect 30 0 11 0;
+#X connect 11 0 28 0;
+#X connect 13 0 29 0;
+#X connect 14 0 29 0;
+#X connect 17 0 29 0;
+#X connect 26 0 30 0;
+#X connect 27 0 30 0;
+#X connect 30 0 10 0;
+#X connect 30 0 23 0;
+#X connect 30 1 16 0;
+#X connect 33 0 31 0;
+#X connect 34 0 31 0;
+#X connect 35 0 31 0;
