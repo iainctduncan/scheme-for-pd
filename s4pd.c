@@ -549,7 +549,7 @@ void s4pd_init_s7(t_s4pd *x){
     if( !s7_boolean(x->s7, loaded_ok) ){
         pd_error((t_object *)x, 
 "ERROR: s4pd.scm and s4pd-schedule.scm did not load.\n\
-Check that sp4d/scm dir is on your Pd file path.\n\
+Check that the s4pd directory (where you installed the external) is on your Pd file path.\n\
 The interpreter will run but the s74 additions and the delay function will not be working.");
     }else{
       post("s4pd initialized");

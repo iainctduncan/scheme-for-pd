@@ -141,13 +141,11 @@ those.;
 #X connect 15 0 19 0;
 #X restore 12 516 pd wireless-messages;
 #X obj 23 164 r code;
-#X obj 229 345 s code;
-#X msg 229 322 (post "hello world!");
-#X msg 403 322 (out 0 (+ 1 2 3));
+#X obj 229 334 s code;
+#X msg 229 311 (post "hello world!");
+#X msg 403 311 (out 0 (+ 1 2 3));
 #X floatatom 28 328 5 0 0 0 - - -;
-#X msg 230 453 reset;
-#X text 227 416 The reset message reboots the s7 intepreter and reloads
-s4pd.scm and the file used as an argument.;
+#X msg 229 450 reset;
 #X msg 366 581 out 0 my-var;
 #X msg 229 581 define my-var 333;
 #X text 226 513 Sending s4pd a message that starts with a symbol will
@@ -156,8 +154,8 @@ Any symbols will be taken to be variable names unless quoted. This
 allows easy one-liners.;
 #X symbolatom 77 328 11 0 0 0 - - -;
 #X msg 478 581 out 1 'quoted-sym;
-#X text 226 371 This can be used to send the s4pd object code from
-your editor by sending it as osc strings over the network.;
+#X text 226 359 This can be used to send the s4pd object code from
+your editor by sending it as osc strings over the network., f 65;
 #X text 222 253 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.,
@@ -301,7 +299,7 @@ change this file to create your own boot file., f 65;
 #X text 9 412 Click for more features:;
 #X msg 108 249 reset;
 #X obj 31 249 r s4pd-in;
-#X obj 229 479 s s4pd-in;
+#X obj 229 476 s s4pd-in;
 #X obj 367 608 s s4pd-in;
 #X obj 21 295 s4pd 2 help-1.scm;
 #X obj 379 723 s s4pd-in;
@@ -320,24 +318,27 @@ The main page is here: https://github.com/iainctduncan/scheme-for-pd
 Please report any bugs \, issues \, or suggestions on the GitHub page
 as an issue., f 90;
 #X obj 24 135 declare -path s4pd;
-#X text 223 131 Ensure you have the s4pd directory on your path so
-that s4pd can find its Scheme (.scm) files. For these examples \, you'll
-want to watch the Pd console for helpful messages and post output.
-, f 65;
+#X text 227 401 The reset message reboots the s7 intepreter and reloads
+s4pd.scm. If you have a filename argument in your s4pd object \, this
+file will also be reloaded., f 65;
+#X text 223 130 Ensure you have the s4pd directory on your Pd file
+path so that s4pd can find its Scheme (.scm) files. For these examples
+\, you'll want to watch the Pd console for helpful messages and post
+output., f 66;
 #X connect 0 0 1 0;
-#X connect 1 0 29 0;
+#X connect 1 0 28 0;
 #X connect 6 0 0 0;
 #X connect 8 0 7 0;
 #X connect 9 0 7 0;
-#X connect 11 0 27 0;
-#X connect 13 0 28 0;
-#X connect 14 0 28 0;
-#X connect 17 0 28 0;
-#X connect 25 0 29 0;
-#X connect 26 0 29 0;
-#X connect 29 0 10 0;
-#X connect 29 0 23 0;
-#X connect 29 1 16 0;
-#X connect 32 0 30 0;
-#X connect 33 0 30 0;
-#X connect 34 0 30 0;
+#X connect 11 0 26 0;
+#X connect 12 0 27 0;
+#X connect 13 0 27 0;
+#X connect 16 0 27 0;
+#X connect 24 0 28 0;
+#X connect 25 0 28 0;
+#X connect 28 0 10 0;
+#X connect 28 0 22 0;
+#X connect 28 1 15 0;
+#X connect 31 0 29 0;
+#X connect 32 0 29 0;
+#X connect 33 0 29 0;
