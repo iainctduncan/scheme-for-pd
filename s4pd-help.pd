@@ -2,7 +2,7 @@
 #X declare -path s4pd;
 #X obj 18 178 fudiformat -u;
 #X obj 18 204 list tosymbol;
-#N canvas 276 60 718 617 sending-from-outlets 0;
+#N canvas 434 56 718 617 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
 #X obj 10 116 list tosymbol;
@@ -57,7 +57,7 @@ behaviour. Please get in touch and tell me if not!, f 32;
 #X connect 23 0 9 0;
 #X connect 24 0 9 0;
 #X restore 11 487 pd sending-from-outlets;
-#N canvas 393 154 613 357 array-io 0;
+#N canvas 442 182 613 357 array-io 0;
 #X obj 26 125 s code;
 #X msg 38 96 (tabw 'array-1 0 .5);
 #X msg 27 68 (post "array-1 0:" (tabr 'array-1 0));
@@ -71,7 +71,7 @@ behaviour. Please get in touch and tell me if not!, f 32;
 #X connect 1 0 0 0;
 #X connect 2 0 0 0;
 #X restore 12 543 pd array-io;
-#N canvas 420 103 785 584 loading-files 0;
+#N canvas 431 59 785 584 loading-files 0;
 #X msg 59 216 reset;
 #X obj 21 130 fudiformat -u;
 #X obj 21 157 list tosymbol;
@@ -79,7 +79,6 @@ behaviour. Please get in touch and tell me if not!, f 32;
 #X obj 32 182 r \$0_in;
 #X obj 175 213 s \$0_in;
 #X obj 172 333 s \$0_code;
-#X msg 172 305 (load-from-path "test-2.scm");
 #X obj 20 253 s4pd;
 #X text 21 12 Examples of loading files. In addition to specifying
 a file name as the 2nd argument to s4pd \, we can load files dynamically
@@ -90,18 +89,22 @@ In s7 \, redefining is permitted., f 97;
 #X text 172 100 load-from-path searches the Pd file paths. You should
 set these up with your file preferences or use a "declare -path".;
 #X obj 174 153 declare -path s4pd;
+#X msg 172 305 (load-from-path "help-2.scm");
 #X text 171 254 load-from-path is a just Scheme functions \, the loading
 is done by the s7 interpreter. You can use it in your Scheme files
 to load other modules.;
-#X connect 0 0 8 0;
+#X text 171 377 Note that loading from sub-directories does not currently
+work. It will be fixed in a subsequent release \, but for now you must
+put all files in a path on your search paths.;
+#X connect 0 0 7 0;
 #X connect 1 0 2 0;
-#X connect 2 0 8 0;
+#X connect 2 0 7 0;
 #X connect 3 0 1 0;
-#X connect 4 0 8 0;
-#X connect 7 0 6 0;
-#X connect 10 0 5 0;
+#X connect 4 0 7 0;
+#X connect 9 0 5 0;
+#X connect 12 0 6 0;
 #X restore 11 436 pd loading-files;
-#N canvas 546 36 643 484 wireless-messages 0;
+#N canvas 452 60 643 484 wireless-messages 0;
 #X floatatom 14 78 5 0 0 2 my-num my-num -;
 #X msg 14 135 :a :b, f 8;
 #X obj 85 305 s code;
@@ -155,7 +158,7 @@ your editor by sending it as osc strings over the network.;
 #X text 222 246 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
 'symbol' message as a request to evaluate the contents as Scheme.;
-#N canvas 579 23 861 802 scheduling-events 0;
+#N canvas 432 32 856 773 scheduling-events 0;
 #X obj 21 163 s code;
 #X obj 23 495 s code;
 #X obj 21 611 s code;
@@ -224,7 +227,7 @@ s4pd-schedule-loaded will be #true., f 98;
 #X connect 31 0 2 0;
 #X connect 32 0 12 0;
 #X restore 12 569 pd scheduling-events;
-#N canvas 322 23 728 745 logging-to-console 0;
+#N canvas 432 31 728 745 logging-to-console 0;
 #X obj 12 337 s code;
 #X msg 12 311 (post "hello world" 1 1.2 :a-keyword);
 #X obj 14 425 s code;
@@ -302,7 +305,7 @@ these.;
 #X obj 379 723 s s4pd-in;
 #X text 226 643 The examples below execute evaluate exactly the same
 as the above. (Note that a different send/receive is used.);
-#X msg 501 691 (out 1 'quoted-sym);
+#X msg 497 689 (out 1 'quoted-sym);
 #X msg 379 689 (out 0 my-var);
 #X msg 227 689 (define my-var 333);
 #X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
