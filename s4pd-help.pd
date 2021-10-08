@@ -79,7 +79,7 @@ behaviour. Please get in touch and tell me if not!, f 32;
 #X obj 21 106 r \$0_code;
 #X obj 32 182 r \$0_in;
 #X obj 175 213 s \$0_in;
-#X obj 172 333 s \$0_code;
+#X obj 173 353 s \$0_code;
 #X obj 20 253 s4pd;
 #X text 21 12 Examples of loading files. In addition to specifying
 a file name as the 2nd argument to s4pd \, we can load files dynamically
@@ -87,23 +87,25 @@ with Scheme code. Note that loading files this way does not reset the
 interpreter \, so multiple files can be loaded on top of each other.
 In s7 \, redefining is permitted., f 97;
 #X msg 175 182 load-from-path "help-1.scm";
-#X text 172 100 load-from-path searches the Pd file paths. You should
-set these up with your file preferences or use a "declare -path".;
 #X obj 174 153 declare -path s4pd;
-#X msg 172 305 (load-from-path "help-2.scm");
-#X text 171 254 load-from-path is a just Scheme functions \, the loading
-is done by the s7 interpreter. You can use it in your Scheme files
-to load other modules.;
-#X text 171 377 Note that loading from sub-directories does not currently
+#X msg 173 325 (load-from-path "help-2.scm");
+#X text 170 392 Note that loading from sub-directories does not currently
 work. It will be fixed in a subsequent release \, but for now you must
 put all files in a path on your search paths.;
+#X text 172 100 load-from-path searches the Pd file paths. You should
+set these up with your path preferences or use a [declare -path s4pd].
+, f 63;
+#X text 171 254 load-from-path is a just Scheme functions \, the loading
+is done by the s7 interpreter. You can use it in your Scheme files
+to load other modules - see the help-2.scm file \, which loads help-1.scm.
+;
 #X connect 0 0 7 0;
 #X connect 1 0 2 0;
 #X connect 2 0 7 0;
 #X connect 3 0 1 0;
 #X connect 4 0 7 0;
 #X connect 9 0 5 0;
-#X connect 12 0 6 0;
+#X connect 11 0 6 0;
 #X restore 11 436 pd loading-files;
 #N canvas 452 60 643 484 wireless-messages 0;
 #X floatatom 14 78 5 0 0 2 my-num my-num -;
