@@ -610,7 +610,6 @@ void s4pd_setup(void) {
 
 void s4pd_free(t_s4pd *x){
     s4pd_cancel_clocks(x);
-    s4pd_init_s7(x);
 }
 
 void s4pd_reset(t_s4pd *x){
