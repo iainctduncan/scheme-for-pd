@@ -1,7 +1,7 @@
 # scheme-for-pd
 Scheme for Pd (s4pd) is an open-source external for live-coding and scripting Pd 
 with an embedded s7 Scheme Lisp interpreter. It is a port of most of
-Scheme for Max, by the same author, for Max/MSP.
+Scheme for Max by the same author, and enables most Scheme code to be run on either.
 
 ## Features in 0.1
 * run code from files, and hot reload files
@@ -21,15 +21,17 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## Installation 
 * s4pd is available as source you can build, and as a beta release download for OSX only (windows to come)
-* If you install the release package, you should expand the tarball contents in your Pd/externals directory. This includes all the scm files, so you should only need this directory to be on your Pd file search path (in File Preferences)
-* If you build from source, you must ensure the scm files are on a path that Pd searches. In the source, these are in their own scm directory. You can add the scm directory to your Pd path preferences, or copy the scm files to a folder in externals along with the s4pd external object (so that they are in the same directory), and ensure this directory is your search path.
-* If s4pd can't find the scm files, you will get warnings about this in the console. Just fix this as above and you should be good.
+* If you install the release package, you should expand the tarball contents in your Pd/externals directory.
+This includes all the scm files and the help patcher, so you should only need this directory to be on your Pd file search path (in File Preferences)
+* If you build from source, see notes below. 
+* If s4pd can't find the scm files, you will get warnings about this in the console. 
+* You may need to add "[declare -path s4pd]" to your patcher, or to edit your file preferences to add the path
+  where the external and the various scm files live.
 
 ## Building from Source
-* Builds on my machine (OSX) using pd-lib-builder and Make
-* Please let me know if you build successfully on Windows or Linux and I will update this section.
-* Scheme sources in scm dir: this dir must be on the Pd file path.
-* s4pd-help.pd is in the patchers dir, must be on file path I think
+* Builds on OSX and Linux using pd-lib-builder.
+* Scheme sources live in the scm sub directory but get copied to the s4pd directory on make install
+* Please let me know if you build successfully on Windows and I will update this section.
 * If there is a windows dev who can help with windows releases, please get in touch
 
 ## Documentation
@@ -53,4 +55,5 @@ Scheme for Pd was created by Iain C T Duncan, 2021
 
 s7 Scheme was created by Bill Schottstaedt.
 
-Scheme for Pd and s7 are open source under the BSD-2 license.
+Scheme for Pd and s7 are open source under the BSD-2 license. 
+You may use these in whatever kind of project you wish!
