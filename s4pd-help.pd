@@ -1,7 +1,8 @@
 #N canvas 245 31 962 795 12;
 #X declare -path s4pd;
-#X obj 18 178 fudiformat -u;
-#X obj 18 204 list tosymbol;
+#X declare -path s4pd;
+#X obj 23 188 fudiformat -u;
+#X obj 23 214 list tosymbol;
 #N canvas 434 56 718 617 sending-from-outlets 0;
 #X msg 107 142 reset, f 6;
 #X obj 10 90 fudiformat -u;
@@ -137,11 +138,11 @@ those.;
 #X connect 14 0 19 0;
 #X connect 15 0 19 0;
 #X restore 12 516 pd wireless-messages;
-#X obj 18 154 r code;
+#X obj 23 164 r code;
 #X obj 229 345 s code;
 #X msg 229 322 (post "hello world!");
 #X msg 403 322 (out 0 (+ 1 2 3));
-#X floatatom 15 322 5 0 0 0 - - -;
+#X floatatom 28 328 5 0 0 0 - - -;
 #X msg 230 453 reset;
 #X text 227 416 The reset message reboots the s7 intepreter and reloads
 s4pd.scm and the file used as an argument.;
@@ -151,13 +152,14 @@ s4pd.scm and the file used as an argument.;
 evaluate the message as Scheme code \, as if it's surrounded by parentheses.
 Any symbols will be taken to be variable names unless quoted. This
 allows easy one-liners.;
-#X symbolatom 65 322 11 0 0 0 - - -;
+#X symbolatom 77 328 11 0 0 0 - - -;
 #X msg 478 581 out 1 'quoted-sym;
 #X text 226 371 This can be used to send the s4pd object code from
 your editor by sending it as osc strings over the network.;
-#X text 222 246 To send s4pd Scheme code while it runs \, use fudiformat
+#X text 222 253 To send s4pd Scheme code while it runs \, use fudiformat
 and tosymbol to convert it to one quoted string. s4pd interpets the
-'symbol' message as a request to evaluate the contents as Scheme.;
+'symbol' message as a request to evaluate the contents as Scheme.,
+f 65;
 #N canvas 432 32 856 773 scheduling-events 0;
 #X obj 21 163 s code;
 #X obj 23 495 s code;
@@ -289,26 +291,24 @@ can log many of them.;
 #X connect 24 0 14 0;
 #X connect 25 0 19 0;
 #X restore 11 461 pd logging-to-console;
-#X text 223 181 The s4pd object takes 2 optional arguments \, an integer
+#X text 223 184 The s4pd object takes 2 optional arguments \, an integer
 for number of outlets \, and a filename to load \, searching the Pd
 filepath. It always loads the s4pd.scm bootstrap file first. You can
-change this file to create your own boot file.;
-#X obj 3 346 print s4pd-out;
+change this file to create your own boot file., f 65;
+#X obj 21 356 print s4pd-out;
 #X text 9 412 Click for more features:;
-#X text 222 147 Basics: You'll want to watch the Pd console while trying
-these.;
-#X msg 103 239 reset;
-#X obj 26 239 r s4pd-in;
+#X msg 108 249 reset;
+#X obj 31 249 r s4pd-in;
 #X obj 229 479 s s4pd-in;
 #X obj 367 608 s s4pd-in;
-#X obj 16 285 s4pd 2 help-1.scm;
+#X obj 21 295 s4pd 2 help-1.scm;
 #X obj 379 723 s s4pd-in;
 #X text 226 643 The examples below execute evaluate exactly the same
 as the above. (Note that a different send/receive is used.);
 #X msg 497 689 (out 1 'quoted-sym);
 #X msg 379 689 (out 0 my-var);
 #X msg 227 689 (define my-var 333);
-#X text 18 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
+#X text 25 6 Scheme for Pd embeds the s7 Scheme interpreter to allow
 scripting and live coding Pd with Scheme Lisp. It is (mostly) compatible
 with Scheme for Max \, so if you've never used Scheme \, you might
 like the online "Learn Scheme For Max" e-book. Check the GitHub page
@@ -316,21 +316,26 @@ for further resources. Scheme for Pd was written by Iain C.T. Duncan
 \, and uses the s7 Scheme interpreter \, by Bill Schottstaedt at CCRMA.
 The main page is here: https://github.com/iainctduncan/scheme-for-pd
 Please report any bugs \, issues \, or suggestions on the GitHub page
-as an issue., f 91;
+as an issue., f 90;
+#X obj 24 135 declare -path s4pd;
+#X text 223 131 Ensure you have the s4pd directory on your path so
+that s4pd can find its Scheme (.scm) files. For these examples \, you'll
+want to watch the Pd console for helpful messages and post output.
+, f 65;
 #X connect 0 0 1 0;
-#X connect 1 0 30 0;
+#X connect 1 0 29 0;
 #X connect 6 0 0 0;
 #X connect 8 0 7 0;
 #X connect 9 0 7 0;
-#X connect 11 0 28 0;
-#X connect 13 0 29 0;
-#X connect 14 0 29 0;
-#X connect 17 0 29 0;
-#X connect 26 0 30 0;
-#X connect 27 0 30 0;
-#X connect 30 0 10 0;
-#X connect 30 0 23 0;
-#X connect 30 1 16 0;
-#X connect 33 0 31 0;
-#X connect 34 0 31 0;
-#X connect 35 0 31 0;
+#X connect 11 0 27 0;
+#X connect 13 0 28 0;
+#X connect 14 0 28 0;
+#X connect 17 0 28 0;
+#X connect 25 0 29 0;
+#X connect 26 0 29 0;
+#X connect 29 0 10 0;
+#X connect 29 0 23 0;
+#X connect 29 1 16 0;
+#X connect 32 0 30 0;
+#X connect 33 0 30 0;
+#X connect 34 0 30 0;
