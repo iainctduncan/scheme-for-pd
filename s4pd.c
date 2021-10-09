@@ -578,14 +578,22 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     // if args are given, they are: outlets, filename
     switch(argc){
       default:
+      // 2 args should be outlets, file
       case 2:
-        x->filename = atom_getsymbol(argv+1);
-      case 1:
         x->num_outlets = atom_getint(argv);
+        x->filename = atom_getsymbol(argv+1);
+        break;
+      // 1 arg can be outlets OR file
+      case 1:
+        if(argv->a_type == A_FLOAT){
+          x->num_outlets = atom_getint(argv);
+        } else {
+          x->filename = atom_getsymbol(argv);
+        }
       case 0:
         break;
     }
-    //post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
+    // post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
     // make the outlets
     for(int i = 0; i < x->num_outlets; i++){
       x->outlets[i] = outlet_new(&x->x_obj, 0);
