@@ -28,6 +28,8 @@ typedef struct _s4pd {
     t_outlet *outlets[MAX_OUTLETS];
     t_symbol *filename;
 
+    t_canvas *x_canvas;
+
     t_s4pd_clock_info *first_clock;   // DUL of clocks 
     t_s4pd_clock_info *last_clock;    // keep pointer to most recent clock
 } t_s4pd;  
@@ -200,17 +202,20 @@ static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args){
     t_s4pd *x = get_pd_obj(s7);
     // get filename from s7
     char *filename = s7_string( s7_car(args) );
-    //post("s7_load_from_path %s", filename);
+    // post("s7_load_from_path %s", filename);
     // use open_via_path to get full path, but then don't load from the descriptor
     int filedesc;
-    char buf[MAXPDSTRING], *bufptr;
+    char path_buf[MAXPDSTRING], *name_buf;
     char load_string[MAXPDSTRING];
-    if((filedesc = open_via_path("", filename, "", buf, &bufptr, MAXPDSTRING, 0)) < 0){
-        pd_error("%s: can't open", filename);
+    if((filedesc = canvas_open(x->x_canvas, filename, "", path_buf, &name_buf, MAXPDSTRING, 0)) < 0){
+        pd_error("s4pd: Can't find file %s. (Check Pd file paths)", filename);
         return s7_nil(s7);
     }
     close(filedesc);
-    sprintf(load_string, "(load \"%s/%s\")", buf, filename);
+    //post("  path_buf %s", path_buf);
+    //post("  name_buf %s", name_buf);
+    sprintf(load_string, "(load \"%s/%s\")", path_buf, name_buf);
+    //post("  load string: %s", load_string);
     s4pd_s7_eval_string(x, load_string);
     return s7_nil(s7);    
 }
@@ -556,7 +561,6 @@ The interpreter will run but the s74 additions and the delay function will not b
     }
 }
 
-
 void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
     //post("s4pd_new(), argc: %i", argc);
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
@@ -566,6 +570,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     x->log_null = false;
     x->num_outlets = 1;
     x->filename = gensym("");
+    x->x_canvas = canvas_getcurrent();
     
     // init the clock info pointer double linked list
     x->first_clock = x->last_clock = NULL;
@@ -704,23 +709,27 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
 
 // call s7_load using the pd searchpath
 void s4pd_load_from_path(t_s4pd *x, char *filename){
-    //post("s4pd_load_from_path() %s", filename);
-    // use open_via_path to get full path, but then don't load from the descriptor
+    // post("s4pd_load_from_path() %s", filename);
+    // use canvas_open to get full path, but then don't load from the descriptor
     int filedesc;
-    char buf[MAXPDSTRING], *bufptr;
+    char path_buf[MAXPDSTRING], *name_buf;
     char full_path[MAXPDSTRING];
-    if((filedesc = open_via_path("", filename, "", buf, &bufptr, MAXPDSTRING, 0)) < 0){
-        error("%s: can't open", filename);
+    if((filedesc = canvas_open(x->x_canvas, filename, "", path_buf, &name_buf, MAXPDSTRING, 0)) < 0){
+        error("s4pd: Can't find file %s. (Check Pd file paths)", filename);
         return;    
     }
     close(filedesc);
-    sprintf(full_path, "%s/%s", buf, filename);
+    // post("  path_buf %s", path_buf);
+    // post("  name_buf %s", name_buf);
+    //sprintf(full_path, "%s/%s", buf, filename);
+    sprintf(full_path, "%s/%s", path_buf, name_buf);
+    // post("  full path: %s", full_path);
     s4pd_s7_load(x, full_path);
 }
 
 // call s7_load using fullpath, with error logging
 void s4pd_s7_load(t_s4pd *x, char *full_path){
-    //post("s4pd_s7_load() %s", full_path);
+    // post("s4pd_s7_load() %s", full_path);
     int gc_loc;
     s7_pointer old_port;
     const char *errmsg = NULL;
