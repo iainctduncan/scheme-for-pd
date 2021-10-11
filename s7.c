@@ -140,10 +140,12 @@
  *   also g++ appears to be slightly slower than gcc
  */
 
-#if (defined(__GNUC__) || defined(__clang__)) /* s7 uses PRId64 so (for example) g++ 4.4 is too old */
-  #define WITH_GCC 1
-#else
-  #define WITH_GCC 0
+#ifndef __MINGW32__
+  #if (defined(__GNUC__) || defined(__clang__)) /* s7 uses PRId64 so (for example) g++ 4.4 is too old */
+    #define WITH_GCC 1
+  #else
+    #define WITH_GCC 0
+  #endif
 #endif
 
 
