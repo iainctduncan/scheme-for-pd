@@ -140,10 +140,12 @@
  *   also g++ appears to be slightly slower than gcc
  */
 
-#if (defined(__GNUC__) || defined(__clang__)) /* s7 uses PRId64 so (for example) g++ 4.4 is too old */
-  #define WITH_GCC 1
-#else
-  #define WITH_GCC 0
+#ifndef __MINGW32__
+  #if (defined(__GNUC__) || defined(__clang__)) /* s7 uses PRId64 so (for example) g++ 4.4 is too old */
+    #define WITH_GCC 1
+  #else
+    #define WITH_GCC 0
+  #endif
 #endif
 
 
@@ -349,7 +351,7 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
   #define MS_WINDOWS 1
 #else
   #define MS_WINDOWS 0
