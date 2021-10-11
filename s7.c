@@ -351,7 +351,7 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
   #define MS_WINDOWS 1
 #else
   #define MS_WINDOWS 0
