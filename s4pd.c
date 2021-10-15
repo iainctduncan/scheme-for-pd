@@ -2,10 +2,14 @@
 #include "string.h"
 #include "s7.h"
 #include "time.h"
+#include <stdlib.h>
  
 #define MAX_OUTLETS 32
 #define MAX_ATOMS_PER_MESSAGE 1024
 #define MAX_ATOMS_PER_OUTPUT_LIST 1024
+
+// for silencing unused param warnings
+#define UNUSED(x) (void)(x)
 
 static t_class *s4pd_class;  
 
@@ -29,22 +33,34 @@ typedef struct _s4pd {
     t_symbol *filename;
 
     t_canvas *x_canvas;
+    t_symbol *extern_dir;   // FUTURE: directory of the external
 
     t_s4pd_clock_info *first_clock;   // DUL of clocks 
     t_s4pd_clock_info *last_clock;    // keep pointer to most recent clock
 } t_s4pd;  
 
+// conversion functions
+int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
+s7_pointer atom_to_s7_obj(s7_scheme *s7, t_atom *ap);
+
+// main external methods
+void * s4pd_new(t_symbol *s, int argc, t_atom *argv);  
 void s4pd_free(t_s4pd *x);
-void s4pd_load_from_path(t_s4pd *x, char *filename);
+void s4pd_init_s7(t_s4pd *x);
+void s4pd_load_from_path(t_s4pd *x, const char *filename);
 void s4pd_s7_load(t_s4pd *x, char *full_path);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
+
+// pd message methods
 void s4pd_reset(t_s4pd *x);
 void s4pd_log_null(t_s4pd *x, t_floatarg f);
 void s4pd_log_repl(t_s4pd *x, t_floatarg f);
+void s4pd_read(t_s4pd *x, t_symbol *s);
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 
+// s7 FFI functions
 static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_post(s7_scheme *s7, s7_pointer args);
@@ -55,8 +71,7 @@ static s7_pointer s7_schedule_delay(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_cancel_delay(s7_scheme *s7, s7_pointer args);
 static s7_pointer s7_cancel_clocks(s7_scheme *s7, s7_pointer args);
 
-int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom);
-
+// schedule/clock
 void s4pd_clock_callback(void *arg);
 void s4pd_remove_clock(t_s4pd *x, t_s4pd_clock_info *clock_info);
 void s4pd_cancel_clocks(t_s4pd *x);
@@ -64,8 +79,9 @@ void s4pd_cancel_clocks(t_s4pd *x);
 
 /********************************************************************************/
 // some helpers for string/symbol handling 
+
 // return true if a string begins and ends with quotes
-int in_quotes(char *string){
+int in_quotes(const char *string){
     //post("in_quotes, input: %s", string);
     if(string[0] == '"' && string[ strlen(string)-1 ] == '"'){
         return 1;
@@ -73,7 +89,7 @@ int in_quotes(char *string){
         return 0;
     }
 } 
-char *trim_quotes(char *input){
+char *trim_quotes(const char *input){
     int length = strlen(input);
     char *trimmed = malloc( sizeof(char*) * length );
     for(int i=0, j=0; i<length; i++){
@@ -81,15 +97,18 @@ char *trim_quotes(char *input){
     }
     return trimmed;
 }   
+
 // return true if a string starts with a single quote
-int is_quoted_symbol(char *string){
+int is_quoted_symbol(const char *string){
     if(string[0] == '\'' && string[ strlen(string)-1 ] != '\''){
         return 1;
     }else{
         return 0;
     }
 }
-char *trim_symbol_quote(char *input){
+
+// return string of input dropping symbol quote
+char *trim_symbol_quote(const char *input){
     // drop the first character (the quote)
     char *trimmed = malloc( sizeof(char*) * (strlen(input) - 1) );
     int i;
@@ -98,6 +117,150 @@ char *trim_symbol_quote(char *input){
     }
     trimmed[i-1] = '\0';
     return trimmed;
+}
+
+/********************************************************************************/
+// main Pd boilerplate
+void s4pd_setup(void) {  
+    s4pd_class = class_new(
+        gensym("s4pd"),  
+        (t_newmethod)s4pd_new, 
+        (t_method)s4pd_free, 
+        sizeof(t_s4pd), 
+        CLASS_DEFAULT, 
+        A_GIMME,        // allow dynamic number of arguments
+        0);  
+    class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_log_repl, gensym("log-repl"), A_DEFFLOAT, 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_cancel_clocks, gensym("cancel-clocks"), 0);
+    class_addmethod(s4pd_class, (t_method)s4pd_read, gensym("read"), A_SYMBOL, 0);
+    class_addanything(s4pd_class, (t_method)s4pd_message);
+}
+
+void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
+    //post("s4pd_new(), argc: %i", argc);
+    UNUSED(s);
+    t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
+
+    // set up default vars
+    x->log_repl = false;
+    x->log_null = false;
+    x->num_outlets = 1;
+    x->filename = gensym("");
+    x->x_canvas = canvas_getcurrent();
+    
+    // init the clock info pointer double linked list
+    x->first_clock = x->last_clock = NULL;
+
+    // if args are given, they are: outlets, filename
+    switch(argc){
+      default:
+      // 2 args should be outlets, file
+      case 2:
+        x->num_outlets = atom_getint(argv);
+        x->filename = atom_getsymbol(argv+1);
+        break;
+      // 1 arg can be outlets OR file
+      case 1:
+        if(argv->a_type == A_FLOAT){
+          x->num_outlets = atom_getint(argv);
+        } else {
+          x->filename = atom_getsymbol(argv);
+        }
+      case 0:
+        break;
+    }
+    // post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
+    // make the outlets
+    for(int i = 0; i < x->num_outlets; i++){
+      x->outlets[i] = outlet_new(&x->x_obj, 0);
+    }
+
+    // set up the s7 interpreter
+    s4pd_init_s7(x);
+       //post("... s4pd_new() done");
+    return (void *)x;  
+}  
+ 
+void s4pd_free(t_s4pd *x){
+    s4pd_cancel_clocks(x);
+}
+
+void s4pd_init_s7(t_s4pd *x){
+    //post("s4pd_init_s7()");
+    // start the S7 interpreter 
+    x->s7 = s7_init();
+    
+    s7_define_function(x->s7, "load-from-path", s7_load_from_path, 1, 0, false, "load a file using the search path");
+    s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
+    s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
+    s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
+
+    s7_define_function(x->s7, "table-read", s7_table_read, 2, 0, false, "read a point from an array");
+    s7_define_function(x->s7, "tabr", s7_table_read, 2, 0, false, "read a point from an array");
+    s7_define_function(x->s7, "table-write", s7_table_write, 3, 0, false, "write a point to an array");
+    s7_define_function(x->s7, "tabw", s7_table_write, 3, 0, false, "write a point to an array");
+
+    s7_define_function(x->s7, "s4pd-schedule-delay", s7_schedule_delay, 2, 0, false, "schedule a delay callback");
+    s7_define_function(x->s7, "s4pd-cancel-clocks", s7_cancel_clocks, 0, 0, false, "cancel all clocks");
+    // not in use right now, might bring it back later
+    //s7_define_function(x->s7, "s4pd-cancel-delay", s7_cancel_delay, 1, 0, false, "cancel and free a clock delay");
+
+    // make the address of this object available in scheme as "pd-obj" so that 
+    // scheme functions can get access to our C functions
+    uintptr_t pd_obj_ptr = (uintptr_t)x;
+    s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
+
+    s7_eval_c_string(x->s7, "(begin (define s4pd-loaded #f) (define s4pd-schedule-loaded #f))");
+
+    // load the bootstrap file
+    // TODO: should it look for an s4pd in the working dir first??
+    s4pd_load_from_path(x, "s4pd.scm");
+
+    // if file arg used, load it
+    if( x->filename != gensym("") ){
+      //post("loading file arg: %s", x->filename->s_name);
+      s4pd_load_from_path(x, x->filename->s_name);
+    }
+
+    // check if the bootfiles loaded ok
+    s7_pointer loaded_ok = s7_eval_c_string(x->s7, "(and s4pd-loaded s4pd-schedule-loaded)");
+    if( !s7_boolean(x->s7, loaded_ok) ){
+        pd_error((t_object *)x, 
+"ERROR: s4pd.scm and s4pd-schedule.scm did not load.\n\
+Check that the s4pd directory (where you installed the external) is on your Pd file path.\n\
+The interpreter will run but the s74 additions and the delay function will not be working.");
+    }else{
+      post("s4pd initialized");
+    }
+}
+
+void s4pd_read(t_s4pd *x, t_symbol *s){
+    // post("s4pd_read: %s", s->s_name);
+    // post("s7_load_from_path %s", filename);
+    // use open_via_path to get full path, but then don't load from the descriptor
+    int filedesc;
+    char path_buf[MAXPDSTRING], *name_buf;
+    char load_string[MAXPDSTRING];
+    if((filedesc = canvas_open(x->x_canvas, s->s_name, "", path_buf, &name_buf, MAXPDSTRING, 0)) < 0){
+        post("s4pd: Error, can't find file %s. (Check Pd file paths)", s->s_name);
+        return;
+    }
+    close(filedesc);
+    //post("  path_buf %s", path_buf);
+    //post("  name_buf %s", name_buf);
+    sprintf(load_string, "(load \"%s/%s\")", path_buf, name_buf);
+    //post("  load string: %s", load_string);
+    s4pd_s7_eval_string(x, load_string);
+}
+
+// get a pd struct pointer from the s7 environment pointer
+t_s4pd *get_pd_obj(s7_scheme *s7){
+    // get our max object by reading the max pointer from the scheme environment
+    uintptr_t s4pd_ptr_from_s7 = (uintptr_t)s7_integer( s7_name_to_value(s7, "pd-obj") );
+    t_s4pd *s4pd_ptr = (t_s4pd *)s4pd_ptr_from_s7;
+    return s4pd_ptr;
 }
 
 // convert a Pd atom to the appropriate type of s7 pointer
@@ -190,12 +353,55 @@ int s7_obj_to_atom(s7_scheme *s7, s7_pointer *s7_obj, t_atom *atom){
     return 0;
 }
 
-// get a pd struct pointer from the s7 environment pointer
-t_s4pd *get_pd_obj(s7_scheme *s7){
-    // get our max object by reading the max pointer from the scheme environment
-    uintptr_t s4pd_ptr_from_s7 = (uintptr_t)s7_integer( s7_name_to_value(s7, "pd-obj") );
-    t_s4pd *s4pd_ptr = (t_s4pd *)s4pd_ptr_from_s7;
-    return s4pd_ptr;
+void s4pd_reset(t_s4pd *x){
+    //post("s4pd_reset()");
+    // cancel and free any outstanding delays by calling clear-delays in scheme
+    s4pd_cancel_clocks(x);
+    s4pd_init_s7(x); 
+    post("s7 reinitialized"); 
+}
+
+// the generic message handler
+void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
+    //post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
+
+    // case for code as a symbol
+    if( s == gensym("symbol")){
+        //post("hanlding scheme code in a symbol message");
+        t_symbol *code_sym = atom_getsymbol(argv); 
+        s4pd_s7_eval_string(x, code_sym->s_name);
+    }
+    // case for code as generic list of atoms
+    // TODO: finish code eval
+    //else if(s->s_name[0] == '('){
+    //  post("caught raw code, first sym: %s", s->s_name);
+    //  t_binbuf *code_bb = binbuf_new();
+    //  binbuf_restore(code_bb, argc, argv);
+    //  char *code_text;
+    //  int  code_length;
+    //  binbuf_gettext(code_bb, &code_text, &code_length);
+    //  post(code_text);
+    //  // this is working for everything save the first symbol, need
+    //  // to join them together
+    //  //
+    //  post("length: %i", code_length);
+    //  binbuf_free(code_bb);
+    //  return;
+    //}
+    else{
+        t_atom *ap;
+        s7_pointer s7_args = s7_nil(x->s7); 
+        // loop through the args backwards to build the cons list 
+        for(int i = argc-1; i >= 0; i--) {
+            ap = argv + i;
+            s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
+        }
+        // add the first message to the arg list (it's always a symbol)
+        // call the s7 eval function, sending in all args as an s7 list
+        s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
+        //post("  - s7_args: %s", s7_object_to_c_string(x->s7, s7_args));
+        s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
+    }
 }
 
 static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args){
@@ -208,7 +414,7 @@ static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args){
     char path_buf[MAXPDSTRING], *name_buf;
     char load_string[MAXPDSTRING];
     if((filedesc = canvas_open(x->x_canvas, filename, "", path_buf, &name_buf, MAXPDSTRING, 0)) < 0){
-        pd_error("s4pd: Can't find file %s. (Check Pd file paths)", filename);
+        post("s4pd: Error, can't find file %s. (Check Pd file paths)", filename);
         return s7_nil(s7);
     }
     close(filedesc);
@@ -288,7 +494,6 @@ static s7_pointer s7_send(s7_scheme *s7, s7_pointer args){
     typedmess( gensym(receiver_name)->s_thing, gensym(msg_symbol), num_atoms, arg_atoms);
     return s7_return_value;
 }
-
 
 // read a value from an Pd array
 static s7_pointer s7_table_read(s7_scheme *s7, s7_pointer args){
@@ -486,152 +691,6 @@ static s7_pointer s7_pd_output(s7_scheme *s7, s7_pointer args){
     return s7_nil(s7);
 }
 
-void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
-    //post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
-
-    // case for code as a symbol
-    if( s == gensym("symbol")){
-        //post("hanlding scheme code in a symbol message");
-        t_symbol *code_sym = atom_getsymbol(argv); 
-        s4pd_s7_eval_string(x, code_sym->s_name);
-    }
-    // case for code as generic list of atoms
-    else{
-        t_atom *ap;
-        s7_pointer s7_args = s7_nil(x->s7); 
-        // loop through the args backwards to build the cons list 
-        for(int i = argc-1; i >= 0; i--) {
-            ap = argv + i;
-            s7_args = s7_cons(x->s7, atom_to_s7_obj(x->s7, ap), s7_args); 
-        }
-        // add the first message to the arg list (it's always a symbol)
-        // call the s7 eval function, sending in all args as an s7 list
-        s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
-        //post("  - s7_args: %s", s7_object_to_c_string(x->s7, s7_args));
-        s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
-    }
-}
-
-void s4pd_init_s7(t_s4pd *x){
-    //post("s4pd_init_s7()");
-    // start the S7 interpreter 
-    x->s7 = s7_init();
-    
-    s7_define_function(x->s7, "load-from-path", s7_load_from_path, 1, 0, false, "load a file using the search path");
-    s7_define_function(x->s7, "out", s7_pd_output, 2, 0, false, "(out 1 99) sends value 99 out outlet 1");
-    s7_define_function(x->s7, "post", s7_post, 1, 0, true, "posts output to the console");
-    s7_define_function(x->s7, "send", s7_send, 2, 0, true, "sends message to a receiver");
-
-    s7_define_function(x->s7, "table-read", s7_table_read, 2, 0, false, "read a point from an array");
-    s7_define_function(x->s7, "tabr", s7_table_read, 2, 0, false, "read a point from an array");
-    s7_define_function(x->s7, "table-write", s7_table_write, 3, 0, false, "write a point to an array");
-    s7_define_function(x->s7, "tabw", s7_table_write, 3, 0, false, "write a point to an array");
-
-    s7_define_function(x->s7, "s4pd-schedule-delay", s7_schedule_delay, 2, 0, false, "schedule a delay callback");
-    s7_define_function(x->s7, "s4pd-cancel-clocks", s7_cancel_clocks, 0, 0, false, "cancel all clocks");
-    // not in use right now, might bring it back later
-    //s7_define_function(x->s7, "s4pd-cancel-delay", s7_cancel_delay, 1, 0, false, "cancel and free a clock delay");
-
-    // make the address of this object available in scheme as "pd-obj" so that 
-    // scheme functions can get access to our C functions
-    uintptr_t pd_obj_ptr = (uintptr_t)x;
-    s7_define_variable(x->s7, "pd-obj", s7_make_integer(x->s7, pd_obj_ptr));  
-
-    s7_pointer load_flags = s7_eval_c_string(x->s7, "(begin (define s4pd-loaded #f) (define s4pd-schedule-loaded #f))");
-
-    // load the bootstrap file
-    // TODO: should it look for an s4pd in the working dir first??
-    s4pd_load_from_path(x, "s4pd.scm");
-
-    // if file arg used, load it
-    if( x->filename != gensym("") ){
-      //post("loading file arg: %s", x->filename->s_name);
-      s4pd_load_from_path(x, x->filename->s_name);
-    }
-
-    // check if the bootfiles loaded ok
-    s7_pointer loaded_ok = s7_eval_c_string(x->s7, "(and s4pd-loaded s4pd-schedule-loaded)");
-    if( !s7_boolean(x->s7, loaded_ok) ){
-        pd_error((t_object *)x, 
-"ERROR: s4pd.scm and s4pd-schedule.scm did not load.\n\
-Check that the s4pd directory (where you installed the external) is on your Pd file path.\n\
-The interpreter will run but the s74 additions and the delay function will not be working.");
-    }else{
-      post("s4pd initialized");
-    }
-}
-
-void *s4pd_new(t_symbol *s, int argc, t_atom *argv){  
-    //post("s4pd_new(), argc: %i", argc);
-    t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
-
-    // set up default vars
-    x->log_repl = false;
-    x->log_null = false;
-    x->num_outlets = 1;
-    x->filename = gensym("");
-    x->x_canvas = canvas_getcurrent();
-    
-    // init the clock info pointer double linked list
-    x->first_clock = x->last_clock = NULL;
-
-    // if args are given, they are: outlets, filename
-    switch(argc){
-      default:
-      // 2 args should be outlets, file
-      case 2:
-        x->num_outlets = atom_getint(argv);
-        x->filename = atom_getsymbol(argv+1);
-        break;
-      // 1 arg can be outlets OR file
-      case 1:
-        if(argv->a_type == A_FLOAT){
-          x->num_outlets = atom_getint(argv);
-        } else {
-          x->filename = atom_getsymbol(argv);
-        }
-      case 0:
-        break;
-    }
-    // post("s4pd_new() outlets: %i filename: %s", x->num_outlets, x->filename->s_name);
-    // make the outlets
-    for(int i = 0; i < x->num_outlets; i++){
-      x->outlets[i] = outlet_new(&x->x_obj, 0);
-    }
-
-    // set up the s7 interpreter
-    s4pd_init_s7(x);
-       //post("... s4pd_new() done");
-    return (void *)x;  
-}  
- 
-void s4pd_setup(void) {  
-    s4pd_class = class_new(
-        gensym("s4pd"),  
-        (t_newmethod)s4pd_new, 
-        (t_method)s4pd_free, 
-        sizeof(t_s4pd), 
-        CLASS_DEFAULT, 
-        A_GIMME,        // allow dynamic number of arguments
-        0);  
-    class_addmethod(s4pd_class, (t_method)s4pd_log_null, gensym("log-null"), A_DEFFLOAT, 0);
-    class_addmethod(s4pd_class, (t_method)s4pd_log_repl, gensym("log-repl"), A_DEFFLOAT, 0);
-    class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
-    class_addmethod(s4pd_class, (t_method)s4pd_cancel_clocks, gensym("cancel-clocks"), 0);
-    class_addanything(s4pd_class, (t_method)s4pd_message);
-}
-
-void s4pd_free(t_s4pd *x){
-    s4pd_cancel_clocks(x);
-}
-
-void s4pd_reset(t_s4pd *x){
-    //post("s4pd_reset()");
-    // cancel and free any outstanding delays by calling clear-delays in scheme
-    s4pd_cancel_clocks(x);
-    s4pd_init_s7(x); 
-    post("s7 reinitialized"); 
-}
 
 void s4pd_log_null(t_s4pd *x, t_floatarg arg){
     //post("log_null()"); 
@@ -716,7 +775,7 @@ void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args){
 }
 
 // call s7_load using the pd searchpath
-void s4pd_load_from_path(t_s4pd *x, char *filename){
+void s4pd_load_from_path(t_s4pd *x, const char *filename){
     // post("s4pd_load_from_path() %s", filename);
     // use canvas_open to get full path, but then don't load from the descriptor
     int filedesc;
@@ -881,7 +940,7 @@ void s4pd_remove_clock(t_s4pd *x, t_s4pd_clock_info *clock_info){
 void s4pd_cancel_clocks(t_s4pd *x){
     //post("s4pd_cancel_clocks(): unsetting and freeing all clocks");
     t_s4pd_clock_info *clock_info; 
-    while( clock_info = x->first_clock ){
+    while( (clock_info = x->first_clock) ){
         s4pd_remove_clock(x, clock_info );
         clock_unset( clock_info->clock );
         clock_free( clock_info->clock );
@@ -893,6 +952,8 @@ void s4pd_cancel_clocks(t_s4pd *x){
 // s7 method for cancelling clocks
 static s7_pointer s7_cancel_clocks(s7_scheme *s7, s7_pointer args){
     //post("s7_cancel_clocks()");
+    UNUSED(args);
     t_s4pd *x = get_pd_obj(s7);
     s4pd_cancel_clocks(x);
+    return s7_nil(s7); 
 }
