@@ -52,6 +52,7 @@ void s4pd_s7_load(t_s4pd *x, char *full_path);
 void s4pd_post_s7_res(t_s4pd *x, s7_pointer res);
 void s4pd_s7_eval_string(t_s4pd *x, char *string_to_eval);
 void s4pd_s7_call(t_s4pd *x, s7_pointer funct, s7_pointer args);
+void s4pd_eval_atoms_as_string(t_s4pd *x, t_symbol *s, long argc, t_atom *argv);
 
 // pd message methods
 void s4pd_reset(t_s4pd *x);
@@ -361,33 +362,23 @@ void s4pd_reset(t_s4pd *x){
     post("s7 reinitialized"); 
 }
 
-// the generic message handler
+// the generic message handler that evaluates input as code
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
     //post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
 
-    // case for code as a symbol
+    // case for code as a single symbol message
     if( s == gensym("symbol")){
         //post("hanlding scheme code in a symbol message");
         t_symbol *code_sym = atom_getsymbol(argv); 
         s4pd_s7_eval_string(x, code_sym->s_name);
     }
-    // case for code as generic list of atoms
-    // TODO: finish code eval
-    //else if(s->s_name[0] == '('){
-    //  post("caught raw code, first sym: %s", s->s_name);
-    //  t_binbuf *code_bb = binbuf_new();
-    //  binbuf_restore(code_bb, argc, argv);
-    //  char *code_text;
-    //  int  code_length;
-    //  binbuf_gettext(code_bb, &code_text, &code_length);
-    //  post(code_text);
-    //  // this is working for everything save the first symbol, need
-    //  // to join them together
-    //  //
-    //  post("length: %i", code_length);
-    //  binbuf_free(code_bb);
-    //  return;
-    //}
+    // case for code as generic list of atoms with first atom starting with a paren
+    // convert the first symbol and the remaining atoms into a string an eval-string it
+    else if(s->s_name[0] == '('){
+      s4pd_eval_atoms_as_string(x, s, argc, argv); 
+    }
+    // case for code as generic list of atoms, no parens
+    // we eval as if it was surrounded by parens by building an s7 list and eval'ing
     else{
         t_atom *ap;
         s7_pointer s7_args = s7_nil(x->s7); 
@@ -401,6 +392,58 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
         s7_args = s7_cons(x->s7, s7_make_symbol(x->s7, s->s_name), s7_args); 
         //post("  - s7_args: %s", s7_object_to_c_string(x->s7, s7_args));
         s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-eval"), s7_args);
+    }
+}
+
+void s4pd_eval_atoms_as_string(t_s4pd *x, t_symbol *s, long argc, t_atom *argv){
+    //post("s4pd_eval_atoms_as_string() argc: %i", argc);
+    char *token_1 = s->s_name;
+    int token_1_size = strlen(token_1);
+    long size = 0;
+    char *atoms_as_text = NULL;
+
+    // single token handler, just eval the first symbol
+    // i.e. first symbol might be "(foo)"
+    if(argc == 0){
+        s4pd_s7_eval_string(x, token_1);
+        return;
+    }else{
+        // we need to get a string consisting of the message selector as string
+        // plus all atoms as string, and then eval with s7
+        t_binbuf *code_bb = binbuf_new();
+        binbuf_restore(code_bb, argc, argv);
+        char *code_text_from_atoms;
+        int  code_length;
+        binbuf_gettext(code_bb, &code_text_from_atoms, &code_length);
+        binbuf_free(code_bb);
+        // code_text is now a c string of the code for everything from the first symbol on
+        // code_length is the length of the text not including size of first symbol 
+        // post("code text: '%s'", code_text_from_atoms);
+        // post("length: %i", code_length);
+        // now join them together
+
+        // TODO: is there a better way to do the below?
+        int code_str_size = token_1_size + code_length + 1;
+        char *code_str = (char *)malloc( sizeof( char ) * code_str_size);
+        sprintf(code_str, "%s %s", token_1, code_text_from_atoms);
+        // post("code_str: '%s'", code_str);
+        // now we have code, but we need to clean up Pd escape chars
+        char *code_str_clean = (char *)malloc( sizeof( char ) * code_str_size);
+        int i, j;
+        for(i=0, j=0; i < code_str_size; i++, j++){
+            if(code_str[j] == '\\') code_str_clean[i] = code_str[++j];
+            else code_str_clean[i] = code_str[j];
+        }
+        // close off the trimmed string
+        code_str_clean[i] = '\0';
+        // post("code_str_clean: '%s'", code_str_clean);
+        // call s7 with cleaned up code
+        s4pd_s7_eval_string(x, code_str_clean);
+
+        // cleanup, TODO: check if the below is correct
+        free(code_text_from_atoms);
+        free(code_str);
+        free(code_str_clean);
     }
 }
 
