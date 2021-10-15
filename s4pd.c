@@ -407,8 +407,8 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
 static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args){
     t_s4pd *x = get_pd_obj(s7);
     // get filename from s7
-    char *filename = s7_string( s7_car(args) );
-    // post("s7_load_from_path %s", filename);
+    const char *filename = s7_string( s7_car(args) );
+    //post("s7_load_from_path %s", filename);
     // use open_via_path to get full path, but then don't load from the descriptor
     int filedesc;
     char path_buf[MAXPDSTRING], *name_buf;
