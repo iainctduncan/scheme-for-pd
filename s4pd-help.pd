@@ -134,7 +134,7 @@ those.;
 #X msg 225 530 define my-var 333;
 #X symbolatom 76 311 11 0 0 0 - - -;
 #X msg 475 530 out 1 'quoted-sym;
-#N canvas 265 42 772 scheduling-events 0;
+#N canvas 265 42 772 770 scheduling-events 1;
 #X obj 407 123 loadbang;
 #X msg 406 145 (define my-var 99);
 #X text 20 434 To make a zero-argument function from some other function
@@ -220,7 +220,7 @@ start with a colon and are symbols that act like they are always quoted.
 will use their printed repr with parens., f 93;
 #X msg 23 512 (post (hash-table :a 1 :b 2 :c (cons :d :e)));
 #X obj 13 146 s s4pd-in;
-#X obj 13 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1 1
+#X obj 13 99 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0 1
 ;
 #X obj 16 221 s s4pd-in;
 #X obj 16 175 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
