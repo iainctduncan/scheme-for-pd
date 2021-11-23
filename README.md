@@ -2,6 +2,7 @@
 Scheme for Pd (s4pd) is an open-source external for live-coding and scripting Pd 
 with an embedded s7 Scheme Lisp interpreter. It is a port of most of
 Scheme for Max by the same author, and enables most Scheme code to be run on either.
+As of 0.1 beta, there are binaries up for Mac and Windows. It will be published to Deken once I know Windows users are having success with the binaries.
 
 ## Features in 0.1
 * Run code from files, and hot reload files
