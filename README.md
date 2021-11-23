@@ -20,7 +20,7 @@ Linguistically, it is mostly R4RS with some later extensions, along with some fe
 from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## Installation 
-* s4pd is available as source you can build, and as a beta release download for Mac (no M1) and Windows (32 and 64)
+* s4pd is available as source you can build, and as a beta release download for Mac (no M1) and Windows (32 and 64) https://github.com/iainctduncan/scheme-for-pd/releases/tag/0.1-beta
 * If you install the release package, you should expand the tarball contents in your Pd/externals directory.
 This includes all the scm files and the help patcher, so you should only need this directory to be on your Pd file search path (in File Preferences)
 * If you build from source, see notes below. 
