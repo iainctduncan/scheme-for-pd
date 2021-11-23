@@ -1,8 +1,8 @@
-#N canvas 1306 -939 923 688 12;
+#N canvas 265 42 923 688 12;
 #X declare -path s4pd;
 #X obj 22 170 fudiformat -u;
 #X obj 22 197 list tosymbol;
-#N canvas 2115 -943 673 610 sending-from-outlets 0;
+#N canvas 265 42 673 610 sending-from-outlets 0;
 #X msg 90 147 reset, f 6;
 #X obj 11 173 s4pd;
 #X msg 221 382 (out 0 (list 1 2 3));
@@ -55,9 +55,9 @@ if you need a list selector., f 32;
 #X connect 25 0 1 0;
 #X connect 26 0 24 0;
 #X restore 10 470 pd sending-from-outlets;
-#N canvas 1505 -830 613 357 array-io 0;
+#N canvas 265 42 613 357 array-io 0;
 #X msg 38 96 (tabw 'array-1 0 .5);
-#N canvas 0 22 450 278 (subpatch) 0;
+#N canvas 265 42 450 278 (subpatch) 0;
 #X array array-1 8 float 3;
 #A 0 0.5 0 0 0 0 0 0 0;
 #X coords 0 1 8 -1 200 140 1;
@@ -69,7 +69,7 @@ functions \, also available as tabr and tabw.;
 #X connect 0 0 4 0;
 #X connect 3 0 4 0;
 #X restore 11 526 pd array-io;
-#N canvas 1621 -876 735 340 loading-files 0;
+#N canvas 265 42 735 340 loading-files 0;
 #X text 21 12 Examples of loading files. In addition to specifying
 a file name as the 2nd argument to s4pd \, we can load files dynamically
 with Scheme code and with the read message. Note that loading files
@@ -92,7 +92,7 @@ as well., f 96;
 #X connect 3 0 1 0;
 #X connect 4 0 1 0;
 #X restore 10 419 pd loading-files;
-#N canvas 1443 -955 643 484 wireless-messages 0;
+#N canvas 265 42 643 484 wireless-messages 0;
 #X floatatom 14 78 5 0 0 2 my-num my-num -;
 #X msg 14 135 :a :b, f 8;
 #X msg 150 82 (send 'my-num 99);
@@ -134,7 +134,7 @@ those.;
 #X msg 225 530 define my-var 333;
 #X symbolatom 76 311 11 0 0 0 - - -;
 #X msg 475 530 out 1 'quoted-sym;
-#N canvas 1267 -977 750 772 scheduling-events 0;
+#N canvas 265 42 772 scheduling-events 0;
 #X obj 407 123 loadbang;
 #X msg 406 145 (define my-var 99);
 #X text 20 434 To make a zero-argument function from some other function
@@ -204,7 +204,7 @@ s4pd-schedule-loaded will be #true., f 98;
 #X connect 21 0 32 0;
 #X connect 24 0 25 0;
 #X restore 11 552 pd scheduling-events;
-#N canvas 1625 -942 728 745 logging-to-console 0;
+#N canvas 265 42 728 745 logging-to-console 0;
 #X msg 12 304 (post "hello world" 1 1.2 :a-keyword);
 #X msg 14 488 (post (list 1 :two "three" '(:a :nested :list)));
 #X msg 14 400 (post 'symbol-1 (quote symbol-2) :a-keyword-is-a-symbol)
