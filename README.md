@@ -4,12 +4,12 @@ with an embedded s7 Scheme Lisp interpreter. It is a port of most of
 Scheme for Max by the same author, and enables most Scheme code to be run on either.
 
 ## Features in 0.1
-* run code from files, and hot reload files
-* evaluate scheme code from Pd messages with a REPL 
-* output numbers, symbols, lists
-* basic array i/o
-* send messages to named receivers
-* schedule functions with delay
+* Run code from files, and hot reload files
+* Evaluate Scheme code from Pd messages with a REPL 
+* Putput numbers, symbols, lists
+* Basic array i/o
+* Send messages to named receivers
+* Schedule functions with delay
 
 Scheme-for-Pd uses s7 Scheme, an embeddable Scheme implementation by Bill Schottstaedt at CCRMA. 
 s7 is a minimal Scheme, with many nice features for algorithmic composition and embedding, 
@@ -20,7 +20,7 @@ Linguistically, it is mostly R4RS with some later extensions, along with some fe
 from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 
 ## Installation 
-* s4pd is available as source you can build, and as a beta release download for OSX only (windows to come)
+* s4pd is available as source you can build, and as a beta release download for Mac (no M1) and Windows (32 and 64)
 * If you install the release package, you should expand the tarball contents in your Pd/externals directory.
 This includes all the scm files and the help patcher, so you should only need this directory to be on your Pd file search path (in File Preferences)
 * If you build from source, see notes below. 
@@ -29,10 +29,8 @@ This includes all the scm files and the help patcher, so you should only need th
   where the external and the various scm files live.
 
 ## Building from Source
-* Builds on OSX and Linux using pd-lib-builder.
+* Builds on OSX, Windows, and Linux using pd-lib-builder.
 * Scheme sources live in the scm sub directory but get copied to the s4pd directory on make install
-* Please let me know if you build successfully on Windows and I will update this section.
-* If there is a windows dev who can help with windows releases, please get in touch
 
 ## Documentation
 * Docs for s4pd do not yet exist, but the help file shows all features
