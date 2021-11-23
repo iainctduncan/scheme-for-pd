@@ -145,7 +145,7 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     t_s4pd *x = (t_s4pd *) pd_new (s4pd_class);
 
     // set up default vars
-    x->log_repl = false;
+    x->log_repl = true;
     x->log_null = false;
     x->num_outlets = 1;
     x->filename = gensym("");
@@ -374,9 +374,10 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
     }
     // case for code as generic list of atoms with first atom starting with a paren
     // convert the first symbol and the remaining atoms into a string an eval-string it
-    else if(s->s_name[0] == '('){
-      s4pd_eval_atoms_as_string(x, s, argc, argv); 
-    }
+    // 2021-11-21 discovered this is crashing, disabling for now
+    //else if(s->s_name[0] == '('){
+    //  s4pd_eval_atoms_as_string(x, s, argc, argv); 
+    //}
     // case for code as generic list of atoms, no parens
     // we eval as if it was surrounded by parens by building an s7 list and eval'ing
     else{
@@ -395,6 +396,8 @@ void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
     }
 }
 
+// 2021-11-22 - something wrong here, when receiving messages this way
+// and using delay, it's crashing.
 void s4pd_eval_atoms_as_string(t_s4pd *x, t_symbol *s, long argc, t_atom *argv){
     //post("s4pd_eval_atoms_as_string() argc: %i", argc);
     char *token_1 = s->s_name;
