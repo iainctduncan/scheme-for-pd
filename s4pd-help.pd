@@ -134,7 +134,7 @@ those.;
 #X msg 225 530 define my-var 333;
 #X symbolatom 76 311 11 0 0 0 - - -;
 #X msg 475 530 out 1 'quoted-sym;
-#N canvas 265 42 772 770 scheduling-events 1;
+#N canvas 265 42 772 770 scheduling-events 0;
 #X obj 407 123 loadbang;
 #X msg 406 145 (define my-var 99);
 #X text 20 434 To make a zero-argument function from some other function
