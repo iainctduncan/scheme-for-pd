@@ -60,5 +60,7 @@
 ; flag to tell s4pd this loaded ok
 (define s4pd-schedule-loaded #t)      
 
+; return nil to avoid any confusing logging to console on boot
+'()
 ;(post "s4pd-schedule.scm loaded")
 

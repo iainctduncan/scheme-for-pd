@@ -68,4 +68,6 @@
 ;; example of an error try catch
 ;;(catch #t (lambda () (/ 1.0 0)) (lambda args (post :foobar)))
 
+; return nil to avoid any confusing logging to console on boot
+'()
 ;(post "s74.scm loaded")

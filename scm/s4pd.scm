@@ -13,4 +13,6 @@
 
 ; flag to tell s4pd this loaded ok
 (define s4pd-loaded #t)
-;(post "s4pd.scm loaded")
+
+; return nil to avoid any confusing logging to console on boot
+'()
