@@ -7,7 +7,7 @@ As of 0.1 beta, there are binaries up for Mac and Windows. It will be published 
 ## Features in 0.1
 * Run code from files, and hot reload files
 * Evaluate Scheme code from Pd messages with a REPL 
-* Putput numbers, symbols, lists
+* Output numbers, symbols, lists
 * Basic array i/o
 * Send messages to named receivers
 * Schedule functions with delay
