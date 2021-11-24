@@ -27,6 +27,7 @@ from Common Lisp, and is similar in many ways to Guile, Clojure, and Janet.
 * If s4pd can't find the scm files, you will get warnings about this in the console. 
 * You may need to add "[declare -path s4pd]" to your patcher, or to edit your file preferences to add the path
   where the external and the various scm files live.
+* Video walk throughs of the installation process are up on the YouTube "Music With Lisp" channel: https://www.youtube.com/channel/UC6ftX7yuEi5uUFkRVJbJyWA
 
 ## Building from Source
 * Builds on OSX, Windows, and Linux using pd-lib-builder.
