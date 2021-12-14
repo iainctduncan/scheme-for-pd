@@ -1,0 +1,28 @@
+#N canvas -427 -931 1225 637 16;
+#X obj 6 70 fudiformat -u;
+#X obj 6 99 list tosymbol;
+#X obj 7 39 r code;
+#X obj 163 70 oscparse;
+#X obj 162 40 netreceive -u -b 7000;
+#X obj 162 103 route symbol;
+#X obj 5 248 outlet;
+#X obj 122 206 r s4pd-in;
+#X text 3 7 Code strings;
+#X text 159 8 OSC messages;
+#X text 426 5 # Python Script I use to send osc messages from an editor
+import liblo import sys port = 7000 # read all of stdin and put in
+one string contents = "n".join( sys.stdin.readlines() ) # pd wants
+a forward slash on the beginning of the message # & enclose in a begin
+to allow sending more than one sexp contents = "/(begin %s )" % contents
+# send as a raw string liblo.send(liblo.Address(port) \, contents)
+;
+#X text 4 282 replace outlet with s4pd \, or send to an s4pd object
+, f 20;
+#X text 120 176 Direct input (no parens);
+#X connect 0 0 1 0;
+#X connect 1 0 6 0;
+#X connect 2 0 0 0;
+#X connect 3 0 5 0;
+#X connect 4 0 3 0;
+#X connect 5 0 6 0;
+#X connect 7 0 6 0;

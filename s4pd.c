@@ -5,6 +5,7 @@
 #include <stdlib.h>
  
 #define MAX_OUTLETS 32
+#define MAX_INLETS 32 
 #define MAX_ATOMS_PER_MESSAGE 1024
 #define MAX_ATOMS_PER_OUTPUT_LIST 1024
 
@@ -30,6 +31,8 @@ typedef struct _s4pd {
     bool  log_null;        // whether to log return values that are null, unspecified, or gensyms
     int   num_outlets;
     t_outlet *outlets[MAX_OUTLETS];
+    int   num_inlets;
+    t_outlet *inlets[MAX_INLETS];
     t_symbol *filename;
 
     t_canvas *x_canvas;
@@ -60,6 +63,7 @@ void s4pd_log_null(t_s4pd *x, t_floatarg f);
 void s4pd_log_repl(t_s4pd *x, t_floatarg f);
 void s4pd_read(t_s4pd *x, t_symbol *s);
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
+void s4pd_listener(t_s4pd *x, t_symbol *s, int argc, t_atom *argv);
 
 // s7 FFI functions
 static s7_pointer s7_load_from_path(s7_scheme *s7, s7_pointer args);
@@ -136,6 +140,9 @@ void s4pd_setup(void) {
     class_addmethod(s4pd_class, (t_method)s4pd_reset, gensym("reset"), 0);
     class_addmethod(s4pd_class, (t_method)s4pd_cancel_clocks, gensym("cancel-clocks"), 0);
     class_addmethod(s4pd_class, (t_method)s4pd_read, gensym("read"), A_SYMBOL, 0);
+
+    class_addmethod(s4pd_class, (t_method)s4pd_listener, gensym("listener"), A_GIMME, 0);
+
     class_addanything(s4pd_class, (t_method)s4pd_message);
 }
 
@@ -148,6 +155,8 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     x->log_repl = true;
     x->log_null = false;
     x->num_outlets = 1;
+    // XXX: temp
+    x->num_inlets = 2;
     x->filename = gensym("");
     x->x_canvas = canvas_getcurrent();
     
@@ -176,6 +185,9 @@ void *s4pd_new(t_symbol *s, int argc, t_atom *argv){
     // make the outlets
     for(int i = 0; i < x->num_outlets; i++){
       x->outlets[i] = outlet_new(&x->x_obj, 0);
+    }
+    for(int i = 1; i < x->num_inlets; i++){
+      x->inlets[i] = inlet_new(&x->x_obj, &x->x_obj.ob_pd, gensym("list"), gensym("listener"));
     }
 
     // set up the s7 interpreter
@@ -362,11 +374,48 @@ void s4pd_reset(t_s4pd *x){
     post("s7 reinitialized"); 
 }
 
+// listener handles incoming messages but does not read them as code
+// ie all incoming symbols should become quoted symbols in scheme
+void s4pd_listener(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
+    //post("s4pd_listener");
+    t_atom *ap;
+    s7_pointer s7_args = s7_nil(x->s7); 
+    // loop through the args backwards to build the cons list 
+    for(int i = argc-1; i >= 0; i--) {
+        ap = argv + i;
+        s7_pointer s7_obj;
+        // inputs are only a symbol or a float 
+        if (ap->a_type == A_FLOAT){
+            s7_obj = s7_make_real(x->s7, atom_getfloat(ap));
+        }else if(ap->a_type == A_SYMBOL){
+            // Pd symbols could be any of: strings, symbols, quoted symbols, symbols for #t or #f
+            // if sent \"foobar\" from max, we want an S7 string "foobar"
+            if( in_quotes(atom_getsymbol(ap)->s_name) ){
+                char *trimmed_sym = trim_quotes(atom_getsymbol(ap)->s_name);
+                s7_obj = s7_make_string(x->s7, trimmed_sym);
+            }else{
+                // otherwise, make it an s7 symbol 
+                s7_obj = s7_make_symbol(x->s7, atom_getsymbol(ap)->s_name);
+            }
+        }else {
+            // unhandled types return an s7 nil
+            post("s4pd: unhandled atom type (%ld)", ap->a_type);
+            s7_obj = s7_nil(x->s7);
+        }
+        s7_args = s7_cons(x->s7, s7_obj, s7_args); 
+    }
+    // add inlet number to the front and call s4pd-dispatch with the arg list
+    int inlet_number = 1;
+    s7_args = s7_cons(x->s7, s7_make_integer(x->s7, inlet_number), s7_args);
+    s4pd_s7_call(x, s7_name_to_value(x->s7, "s4pd-dispatch"), s7_args);
+ 
+}
+
 // the generic message handler that evaluates input as code
 void s4pd_message(t_s4pd *x, t_symbol *s, int argc, t_atom *argv){
     //post("s4pd_message() *s: '%s' argc: %i", s->s_name, argc);
 
-    // case for code as a single symbol message
+    // case for code that comes in as a single symbol message
     if( s == gensym("symbol")){
         //post("hanlding scheme code in a symbol message");
         t_symbol *code_sym = atom_getsymbol(argv); 
